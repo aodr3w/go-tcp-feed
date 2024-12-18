@@ -27,6 +27,7 @@ func startClient() error {
 	conn, err := net.Dial("tcp", fmt.Sprintf(":%d", SERVER_PORT))
 
 	if err != nil {
+		log.Fatalf("failed to reach server: %s", err)
 		return err
 	}
 
@@ -36,9 +37,6 @@ func startClient() error {
 	for {
 		msg := readMsg()
 		if strings.EqualFold(msg, "q") {
-			log.Println("exiting..")
-			stop <- struct{}{}
-			conn.Close()
 			break
 		}
 		_, err := conn.Write([]byte(msg))
@@ -46,6 +44,8 @@ func startClient() error {
 			log.Fatal(err)
 		}
 	}
+	conn.Close()
+	<-stop
 	return nil
 
 }
@@ -53,23 +53,21 @@ func startClient() error {
 func readtoStdOut(conn net.Conn, stop chan struct{}) {
 	buf := make([]byte, 1024)
 	for {
-		select {
-		case _ = <-stop:
-			return
-		default:
-			n, err := conn.Read(buf)
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					log.Println("server closed the connection")
-					return
-				}
-				log.Printf("error reading from conn: %s\n", err)
-				return
-			}
-			recv := string(buf[:n])
-			fmt.Printf("\n[server]: %s\n>> ", recv)
-		}
+		n, err := conn.Read(buf)
+		if err != nil {
 
+			if errors.Is(err, io.EOF) {
+				log.Println("server closed the connection")
+			} else if opErr, ok := err.(*net.OpError); ok && strings.Contains(opErr.Err.Error(), "use of closed network connection") {
+				fmt.Print()
+			} else {
+				log.Printf("error reading from conn: %s\n", err)
+			}
+			close(stop)
+			return
+		}
+		recv := string(buf[:n])
+		fmt.Printf("\n[server]: %s\n>> ", recv)
 	}
 }
 
