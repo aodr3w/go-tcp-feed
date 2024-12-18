@@ -22,35 +22,55 @@ func readMsg() string {
 }
 
 func startClient() error {
+	stop := make(chan struct{}, 1)
+
 	conn, err := net.Dial("tcp", fmt.Sprintf(":%d", SERVER_PORT))
 
 	if err != nil {
 		return err
 	}
 
-	defer conn.Close()
+	go readtoStdOut(conn, stop)
 
 	fmt.Println("enter message or q to quit")
 	for {
 		msg := readMsg()
 		if strings.EqualFold(msg, "q") {
 			log.Println("exiting..")
+			stop <- struct{}{}
+			conn.Close()
 			break
 		}
 		_, err := conn.Write([]byte(msg))
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		resp, err := io.ReadAll(conn)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("server response: %s\n", string(resp))
 	}
 	return nil
 
+}
+
+func readtoStdOut(conn net.Conn, stop chan struct{}) {
+	buf := make([]byte, 1024)
+	for {
+		select {
+		case _ = <-stop:
+			return
+		default:
+			n, err := conn.Read(buf)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					log.Println("server closed the connection")
+					return
+				}
+				log.Printf("error reading from conn: %s\n", err)
+				return
+			}
+			recv := string(buf[:n])
+			fmt.Printf("\n[server]: %s\n>> ", recv)
+		}
+
+	}
 }
 
 func handleConnection(conn net.Conn) {
