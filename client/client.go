@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"bufio"
@@ -17,7 +17,7 @@ func readMsg() string {
 	return strings.TrimSpace(msg)
 }
 
-func startClient(serverPort int) error {
+func Start(serverPort int) error {
 	stop := make(chan struct{}, 1)
 	var name string
 

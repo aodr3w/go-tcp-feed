@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"errors"
@@ -40,7 +40,7 @@ func handleConnection(conn net.Conn) {
 	}
 }
 
-func startServer(SERVER_PORT int) error {
+func Start(SERVER_PORT int) error {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", SERVER_PORT))
 	if err != nil {
 		return err
