@@ -16,7 +16,6 @@ const SERVER_PORT = 2000
 
 func readMsg() string {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print(">> ")
 	msg, _ := reader.ReadString('\n')
 	return strings.TrimSpace(msg)
 }
@@ -34,6 +33,7 @@ func startClient() error {
 	go readtoStdOut(conn, stop)
 
 	fmt.Println("enter message or q to quit")
+	fmt.Print(">> ")
 	for {
 		msg := readMsg()
 		if strings.EqualFold(msg, "q") {
@@ -67,7 +67,7 @@ func readtoStdOut(conn net.Conn, stop chan struct{}) {
 			return
 		}
 		recv := string(buf[:n])
-		fmt.Printf("\n[server]: %s\n>> ", recv)
+		fmt.Printf("[server]: %s\n>> ", recv)
 	}
 }
 
