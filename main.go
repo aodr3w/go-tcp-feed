@@ -22,6 +22,17 @@ func readMsg() string {
 
 func startClient() error {
 	stop := make(chan struct{}, 1)
+	var name string
+
+	for {
+		fmt.Print("name: ")
+		name = readMsg()
+		if len(name) <= 3 {
+			fmt.Println("name should be atleast 3 characters")
+			continue
+		}
+		break
+	}
 
 	conn, err := net.Dial("tcp", fmt.Sprintf(":%d", SERVER_PORT))
 
@@ -30,9 +41,16 @@ func startClient() error {
 		return err
 	}
 
+	//send the user's name to the server
+	_, err = conn.Write([]byte(fmt.Sprintf("name-%s", name)))
+
+	if err != nil {
+		return err
+	}
+
 	go readtoStdOut(conn, stop)
 
-	fmt.Println("enter message or q to quit")
+	fmt.Println("enter name or q to quit")
 	fmt.Print(">> ")
 	for {
 		msg := readMsg()
@@ -67,12 +85,13 @@ func readtoStdOut(conn net.Conn, stop chan struct{}) {
 			return
 		}
 		recv := string(buf[:n])
-		fmt.Printf("[server]: %s\n>> ", recv)
+		fmt.Printf("%s\n>> ", recv)
 	}
 }
 
 func handleConnection(conn net.Conn) {
 	//read the data off the connection and echo it back
+	var name string
 	defer conn.Close()
 	buf := make([]byte, 1024)
 	for {
@@ -86,12 +105,18 @@ func handleConnection(conn net.Conn) {
 			return
 		}
 		recv := string(buf[:n])
-		resp := fmt.Sprintf("echo: %s", recv)
-		_, writeErr := conn.Write([]byte(resp))
-		if writeErr != nil {
-			log.Printf("error writing to conn: %s\n", writeErr)
-			return
+		if strings.Contains(recv, "name-") {
+			ss := strings.Split(recv, "name-")
+			name = ss[len(ss)-1]
+		} else {
+			resp := fmt.Sprintf("%s: %s", name, recv)
+			_, writeErr := conn.Write([]byte(resp))
+			if writeErr != nil {
+				log.Printf("error writing to conn: %s\n", writeErr)
+				return
+			}
 		}
+
 	}
 }
 
