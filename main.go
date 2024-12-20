@@ -18,7 +18,8 @@ func main() {
 	flag.Parse()
 
 	if *svr {
-		server.Start(serverPort)
+		b := server.NewBroadCast()
+		server.Start(serverPort, b)
 		os.Exit(0)
 	}
 	if *clt {

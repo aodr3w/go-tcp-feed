@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"net"
 	"sync"
 )
 
@@ -11,18 +12,21 @@ since reading has a faster turn over time than writing, we should read first
 and then attempt to write to the data slice in the handle connection function
 */
 type Broadcast struct {
-	m    *sync.RWMutex
-	data [][]byte
+	m       *sync.RWMutex
+	data    [][]byte
+	readIdx map[string]int
 }
 
 func NewBroadCast() *Broadcast {
 	return &Broadcast{
-		m:    &sync.RWMutex{},
-		data: make([][]byte, 0),
+		m:       &sync.RWMutex{},
+		data:    make([][]byte, 0),
+		readIdx: make(map[string]int),
 	}
 }
 
-func (bc *Broadcast) Write(data []byte) int {
+func (bc *Broadcast) Write(conn net.Conn, data []byte) {
+	addr := conn.RemoteAddr().String()
 	bc.m.Lock()
 	defer bc.m.Unlock()
 	bc.data = append(bc.data, data)
@@ -30,11 +34,13 @@ func (bc *Broadcast) Write(data []byte) int {
 	// This ensures the writer (publisher) can avoid reading the message it just wrote.
 	// Consumers might encounter index errors if they try to read an index that is not yet written,
 	// but this is expected behavior and should be handled by the caller.
-	return len(bc.data)
+	bc.readIdx[addr] = len(bc.data)
 }
 
-func (bc *Broadcast) Read(idx int) ([]byte, error) {
+func (bc *Broadcast) Read(conn net.Conn) ([]byte, error) {
 	bc.m.RLock()
+	addr := conn.RemoteAddr().String()
+	idx := bc.readIdx[addr]
 	defer bc.m.RUnlock()
 	if idx >= 0 && idx < len(bc.data) {
 		return bc.data[idx], nil
