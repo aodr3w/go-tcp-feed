@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net"
 	"sync"
 )
@@ -37,12 +36,15 @@ func (bc *Broadcast) Write(conn net.Conn, data []byte) {
 	bc.readIdx[addr] = len(bc.data)
 }
 
-func (bc *Broadcast) Read(addr string) ([]byte, error) {
+func (bc *Broadcast) Read(name string) []byte {
 	bc.m.RLock()
-	idx := bc.readIdx[addr]
+	idx := bc.readIdx[name]
 	defer bc.m.RUnlock()
 	if idx >= 0 && idx < len(bc.data) {
-		return bc.data[idx], nil
+		data := bc.data[idx]
+		if string(data)[:len(name)] != name {
+			return data
+		}
 	}
-	return []byte{}, fmt.Errorf("index %d out of bounds (length: %d)", idx, len(bc.data))
+	return []byte{}
 }
