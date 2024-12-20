@@ -1,7 +1,7 @@
 package server
 
 import (
-	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -39,5 +39,5 @@ func (bc *Broadcast) Read(idx int) ([]byte, error) {
 	if idx >= 0 && idx < len(bc.data) {
 		return bc.data[idx], nil
 	}
-	return nil, errors.New("idx out of bounds")
+	return nil, fmt.Errorf("index %d out of bounds (length: %d)", idx, len(bc.data))
 }
