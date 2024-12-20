@@ -37,13 +37,12 @@ func (bc *Broadcast) Write(conn net.Conn, data []byte) {
 	bc.readIdx[addr] = len(bc.data)
 }
 
-func (bc *Broadcast) Read(conn net.Conn) ([]byte, error) {
+func (bc *Broadcast) Read(addr string) ([]byte, error) {
 	bc.m.RLock()
-	addr := conn.RemoteAddr().String()
 	idx := bc.readIdx[addr]
 	defer bc.m.RUnlock()
 	if idx >= 0 && idx < len(bc.data) {
 		return bc.data[idx], nil
 	}
-	return nil, fmt.Errorf("index %d out of bounds (length: %d)", idx, len(bc.data))
+	return []byte{}, fmt.Errorf("index %d out of bounds (length: %d)", idx, len(bc.data))
 }
