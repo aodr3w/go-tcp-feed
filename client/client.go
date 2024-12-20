@@ -58,6 +58,7 @@ func Start(serverPort int) error {
 		if err != nil {
 			log.Fatal(err)
 		}
+		fmt.Print(">> ")
 	}
 	conn.Close()
 	<-stop
