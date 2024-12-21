@@ -20,3 +20,7 @@ stop-db:
 
 remove-volume:
 	docker volume rm ${VOLUME_NAME}
+
+open-db:
+	docker exec -it go_chat_db \
+	psql -U ${DB_USER} -d ${DB_NAME}
