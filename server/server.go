@@ -77,9 +77,6 @@ func handleConnection(conn net.Conn, broadcast *Broadcast) {
 			log.Printf("%v\n", err)
 			return
 		}
-		//write connection payload to broadcast, since this action requires a lock, lets do it last
-		//since it may lead to delays
-		//TODO maybe write to should push to a channel to avoid the connection from blocking
 		broadcast.Write([]byte(fmt.Sprintf("%s: %s", name, recv)))
 		log.Printf("message %s pushed\n", string(recv))
 	}

@@ -4,11 +4,6 @@ import (
 	"sync"
 )
 
-//NOTES
-/*
-since reading has a faster turn over time than writing, we should read first
-and then attempt to write to the data slice in the handle connection function
-*/
 type Broadcast struct {
 	m       *sync.RWMutex
 	data    [][]byte
