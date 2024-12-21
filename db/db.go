@@ -44,16 +44,19 @@ func InitDB() error {
 	name VARCHAR(100) NOT NULL UNIQUE,
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL
 	);`
+
 	err = execSQL(createUserSQL)
 	if err != nil {
 		return err
 	}
+
 	createMessagesSQL := `CREATE TABLE IF NOT EXISTS messages (
-		id SERIAL PRIMARY KEY,
-		name VARCHAR(100) NOT NULL,
-		text TEXT NOT NULL,
-		created_at TIMESTAMP WITH TIME ZONE NOT NULL
+	id SERIAL PRIMARY KEY,
+	user_id INT NOT NULL REFERENCES users(id),
+	text TEXT NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL
 	);`
+
 	err = execSQL(createMessagesSQL)
 	if err != nil {
 		return err
