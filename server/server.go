@@ -8,6 +8,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/aodr3w/go-chat/db"
 )
 
 func extractName(conn net.Conn, data []byte) (string, error) {
@@ -34,7 +36,7 @@ func readConn(conn net.Conn) (data []byte, err error) {
 	return buf[:n], nil
 }
 
-func handleConnection(conn net.Conn, broadcast *Broadcast) {
+func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 	defer conn.Close()
 	//read latest message from broadcast queue
 	//TODO add a readALL function that loads all messages from earliest to last when connection is first established
@@ -49,6 +51,15 @@ func handleConnection(conn net.Conn, broadcast *Broadcast) {
 
 	if err != nil {
 		log.Printf("%v\n", err)
+		return
+	}
+	//check if name is already taken if so return an error
+	_, err = dao.GetUserByName(name)
+
+	//TODO Registering a USER should be seperate logic
+	if err != nil {
+		log.Printf("[getUserError]  %v\n", err)
+		conn.Write([]byte(err.Error()))
 		return
 	}
 
@@ -82,7 +93,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast) {
 	}
 }
 
-func Start(SERVER_PORT int, b *Broadcast) error {
+func Start(SERVER_PORT int, broadcast *Broadcast, dao *db.Dao) error {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", SERVER_PORT))
 	if err != nil {
 		return err
@@ -98,6 +109,6 @@ func Start(SERVER_PORT int, b *Broadcast) error {
 			}
 			return err
 		}
-		go handleConnection(conn, b)
+		go handleConnection(conn, broadcast, dao)
 	}
 }

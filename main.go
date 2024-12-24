@@ -24,8 +24,9 @@ func main() {
 	flag.Parse()
 
 	if *svr {
-		b := server.NewBroadCast()
-		server.Start(serverPort, b)
+		dao := db.NewDAO()
+		b := server.NewBroadCast(&dao)
+		server.Start(serverPort, b, &dao)
 		os.Exit(0)
 	}
 	if *clt {

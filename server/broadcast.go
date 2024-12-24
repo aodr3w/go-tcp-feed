@@ -2,19 +2,23 @@ package server
 
 import (
 	"sync"
+
+	"github.com/aodr3w/go-chat/db"
 )
 
 type Broadcast struct {
 	m       *sync.RWMutex
 	data    [][]byte
 	readIdx map[string]int
+	dao     *db.Dao
 }
 
-func NewBroadCast() *Broadcast {
+func NewBroadCast(dao *db.Dao) *Broadcast {
 	return &Broadcast{
 		m:       &sync.RWMutex{},
 		data:    make([][]byte, 0),
 		readIdx: make(map[string]int),
+		dao:     dao,
 	}
 }
 
