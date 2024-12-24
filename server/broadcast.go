@@ -28,6 +28,21 @@ func (bc *Broadcast) Write(data []byte) {
 	bc.data = append(bc.data, data)
 }
 
+func (bc *Broadcast) WriteV2(data []byte) error {
+	//serialize data into message struct
+	//must contain author information e.g userId
+	//insert message into database
+	return nil
+}
+
+func (bc *Broadcast) ReadV2(userId int) []db.Message {
+	messages := make([]db.Message, 0)
+	//TODO populate struct with latest
+	//initiall every client starts from index 0
+	//we will load the latest n messages and send them back to the client , setting the readIDX to n + 1
+	return messages
+}
+
 func (bc *Broadcast) Read(name string) []byte {
 	bc.m.RLock()
 	idx := bc.readIdx[name]
