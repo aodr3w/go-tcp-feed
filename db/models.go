@@ -16,6 +16,7 @@ type User struct {
 // represents a message sent by a client
 type Message struct {
 	ID        int
+	userID    int
 	Name      string
 	Text      string
 	CreatedAt time.Time
@@ -41,4 +42,11 @@ func FromBytes(data []byte) (*Message, error) {
 		return nil, fmt.Errorf("error decoding message: %w", err)
 	}
 	return &msg, nil
+}
+
+func (m Message) String() string {
+	return fmt.Sprintf(
+		"Message{ID: %d, userID: %d, Name: %q, Text: %q, CreatedAt: %s}",
+		m.ID, m.userID, m.Name, m.Text, m.CreatedAt.Format(time.RFC3339),
+	)
 }
