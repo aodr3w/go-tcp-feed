@@ -35,12 +35,24 @@ func (bc *Broadcast) WriteV2(data []byte) error {
 	return nil
 }
 
-func (bc *Broadcast) ReadV2(userId int, offset int, size int) []db.Message {
-	messages := make([]db.Message, 0)
-	//TODO populate struct with latest
-	//initialy every client starts from index 0
-	//we will load the latest n messages and send them back to the client , setting the readIDX to n + 1
-	return messages
+func (bc *Broadcast) LoadMessages(offset int, size int) ([]db.Message, error) {
+	/*called by client when chat is first open
+	it loads message history
+	*/
+	messages, err := bc.dao.GetMessages(size, offset)
+	if err != nil {
+		return nil, err
+	}
+	return messages, nil
+}
+
+func (bc *Broadcast) ReadMessages(userId int, offset int, size int) ([]db.Message, error) {
+	/*retrieves all messages that were `sent` to the user*/
+	messages, err := bc.dao.GetReceivedMessages(userId, size, offset)
+	if err != nil {
+		return nil, err
+	}
+	return messages, nil
 }
 
 func (bc *Broadcast) Read(name string) []byte {

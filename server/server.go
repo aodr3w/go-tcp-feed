@@ -56,11 +56,27 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 	//check if name is already taken if so return an error
 	_, err = dao.GetUserByName(name)
 
-	//TODO Registering a USER should be seperate logic
 	if err != nil {
-		log.Printf("[getUserError]  %v\n", err)
-		conn.Write([]byte(err.Error()))
-		return
+		if errors.Is(err, &db.UserNotFoundError) {
+			//create new user and respond with userID that the client should save
+			newUser, err := dao.CreateUser(name)
+			if err != nil {
+				conn.Write([]byte(err.Error()))
+				return
+			}
+
+			if len(newUser.Name) < 1 {
+				conn.Write([]byte(fmt.Sprintf("[Internal Server Error] invalid user data")))
+				return
+			}
+
+			conn.Write([]byte(fmt.Sprintf("userID-%s", newUser.Name)))
+		} else {
+			log.Printf("[getUserError]  %v\n", err)
+			conn.Write([]byte(err.Error()))
+			return
+
+		}
 	}
 
 	go func() {

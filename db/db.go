@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
 
@@ -74,32 +75,52 @@ func NewDAO() Dao {
 	}
 }
 
+func (dao Dao) CreateUser(name string) (*User, error) {
+	//we may need some kind of db level locking here
+	query := `
+	INSERT INTO USERS (name, created_at)
+	VALUES ($1, NOW())
+	RETURNING id, name
+	`
+	var user User
+
+	err := dao.QueryRow(query, name).Scan(&user.ID, &user.Name)
+
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			return nil, &UserNameNotAvailable{name}
+		}
+		return nil, fmt.Errorf("error creating user: %w", err)
+	}
+	return &user, nil
+}
+
 func (dao Dao) GetUserByName(name string) (*User, error) {
 	var user User
 	query := `SELECT id, name FROM users WHERE name = $1`
 	err := dao.QueryRow(query, name).Scan(&user.ID, &user.Name)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("user not found: %s", name)
+			return nil, &UserNotFoundError
 		}
 		return nil, fmt.Errorf("error retrieving user: %w", err)
 	}
 	return &user, nil
 }
 
-func (dao Dao) GetUserMessages(name string, size int, offset int) ([]Message, error) {
-	//TODO add pagination to this, offsets etc
+func (dao Dao) GetReceivedMessages(userID int, size int, offset int) ([]Message, error) {
+	//Get other messages other than current users messages
 	query := `
 	SELECT m.id, u.name, m.text, m.created_at
 	FROM messages m
 	JOIN users u on m.user_id = u.id
-	WHERE u.name = $1
+	WHERE u.id != $1
 	ORDER BY m.created_at ASC
 	LIMIT $2 OFFSET $3
 	`
-	rows, err := dao.Query(query, name, size, offset)
+	rows, err := dao.Query(query, userID, size, offset)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving messages for user %s: %w", name, err)
+		return nil, fmt.Errorf("error retrieving messages for user %d: %w", userID, err)
 	}
 	defer rows.Close()
 	var messages []Message
@@ -117,20 +138,20 @@ func (dao Dao) GetUserMessages(name string, size int, offset int) ([]Message, er
 	return messages, nil
 }
 
-func (dao Dao) InsertUserMessage(userId int, message string) error {
+func (dao Dao) InsertUserMessage(userID int, message string) error {
 	query := `
 	INSERT INTO messages (user_id, text, created_at)
 	VALUES ($1, $2, NOW())
 	`
-	_, err := dao.Exec(query, userId, message)
+	_, err := dao.Exec(query, userID, message)
 
 	if err != nil {
-		return fmt.Errorf("error inserting message for user ID %d: %w", userId, err)
+		return fmt.Errorf("error inserting message for user ID %d: %w", userID, err)
 	}
 	return nil
 }
 
-func (dao Dao) GetMessages(offset int, size int) ([]Message, error) {
+func (dao Dao) GetMessages(size int, offset int) ([]Message, error) {
 	query := `
 		SELECT * from messages ORDER BY created_at ASC
 		LIMIT $1 OFFSET $2
