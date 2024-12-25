@@ -87,7 +87,7 @@ func (dao Dao) GetUserByName(name string) (*User, error) {
 	return &user, nil
 }
 
-func (dao Dao) GetUserMessages(name string) ([]Message, error) {
+func (dao Dao) GetUserMessages(name string, size int, offset int) ([]Message, error) {
 	//TODO add pagination to this, offsets etc
 	query := `
 	SELECT m.id, u.name, m.text, m.created_at
@@ -95,8 +95,9 @@ func (dao Dao) GetUserMessages(name string) ([]Message, error) {
 	JOIN users u on m.user_id = u.id
 	WHERE u.name = $1
 	ORDER BY m.created_at ASC
+	LIMIT $2 OFFSET $3
 	`
-	rows, err := dao.Query(query, name)
+	rows, err := dao.Query(query, name, size, offset)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving messages for user %s: %w", name, err)
 	}
@@ -127,4 +128,31 @@ func (dao Dao) InsertUserMessage(userId int, message string) error {
 		return fmt.Errorf("error inserting message for user ID %d: %w", userId, err)
 	}
 	return nil
+}
+
+func (dao Dao) GetMessages(offset int, size int) ([]Message, error) {
+	query := `
+		SELECT * from messages ORDER BY created_at ASC
+		LIMIT $1 OFFSET $2
+	`
+	rows, err := dao.Query(query, size, offset)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving messages %w", err)
+	}
+
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		var msg Message
+		if err := rows.Scan(&msg.ID, &msg.Name, &msg.Text, &msg.CreatedAt); err != nil {
+			return nil, fmt.Errorf("error retrieving message row %w", err)
+		}
+		messages = append(messages, msg)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over messages: %w", err)
+	}
+	return messages, nil
 }

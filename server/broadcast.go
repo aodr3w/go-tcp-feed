@@ -35,10 +35,10 @@ func (bc *Broadcast) WriteV2(data []byte) error {
 	return nil
 }
 
-func (bc *Broadcast) ReadV2(userId int) []db.Message {
+func (bc *Broadcast) ReadV2(userId int, offset int, size int) []db.Message {
 	messages := make([]db.Message, 0)
 	//TODO populate struct with latest
-	//initiall every client starts from index 0
+	//initialy every client starts from index 0
 	//we will load the latest n messages and send them back to the client , setting the readIDX to n + 1
 	return messages
 }
