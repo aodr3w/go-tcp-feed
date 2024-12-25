@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/aodr3w/go-chat/db"
@@ -35,7 +34,6 @@ func (bc *Broadcast) Write(data []byte) error {
 		return fmt.Errorf("error getting user associated with message %w", err)
 	}
 
-	log.Printf("message sender %v", sender)
 	return bc.dao.InsertUserMessage(sender.ID, msg.Name)
 }
 

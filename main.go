@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"flag"
 	"log"
 	"os"
@@ -13,11 +14,13 @@ import (
 const serverPort = 2000
 
 func main() {
-
 	err := db.InitDB()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	gob.Register(db.Message{})
+
 	svr := flag.Bool("server", false, "provide to start server")
 	clt := flag.Bool("client", false, "provide to start client")
 

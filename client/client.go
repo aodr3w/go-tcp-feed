@@ -9,6 +9,9 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/aodr3w/go-chat/db"
 )
 
 func readMsg() string {
@@ -50,14 +53,26 @@ func Start(serverPort int) error {
 	fmt.Println("enter name or q to quit")
 	fmt.Print(">> ")
 	for {
-		msg := readMsg()
-		if strings.EqualFold(msg, "q") {
+		txt := readMsg()
+		if strings.EqualFold(txt, "q") {
 			break
 		}
-		_, err := conn.Write([]byte(msg))
-		if err != nil {
-			log.Fatal(err)
+
+		msg := db.Message{
+			Name:      name,
+			Text:      txt,
+			CreatedAt: time.Now(),
 		}
+		msgBytes, err := msg.ToBytes()
+		if err != nil {
+			fmt.Printf("%s", err.Error())
+		} else {
+			_, err := conn.Write(msgBytes)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
 		fmt.Print(">> ")
 	}
 	conn.Close()

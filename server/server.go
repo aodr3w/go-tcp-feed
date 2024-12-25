@@ -71,7 +71,6 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 				writeConn(conn, []byte(err.Error()))
 				return
 			}
-
 			if len(newUser.Name) < 1 {
 				writeConn(conn, []byte(fmt.Sprintf("[Internal Server Error] invalid user data")))
 				return
@@ -86,7 +85,6 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 	} else {
 		conn.Write([]byte(fmt.Sprintf("userID-%s", existingUser.Name)))
 	}
-
 	//load messages first
 	messages, err := broadcast.LoadMessages(0, 100)
 
@@ -136,7 +134,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 			log.Printf("%v\n", err)
 			return
 		}
-		err = broadcast.Write([]byte(fmt.Sprintf("%s: %s", name, recv)))
+		err = broadcast.Write(recv)
 		if err != nil {
 			writeConn(conn, []byte(err.Error()))
 			return
