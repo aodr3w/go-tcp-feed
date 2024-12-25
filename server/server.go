@@ -123,16 +123,20 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 				writeConn(conn, []byte(err.Error()))
 				return
 			}
-			for _, msg := range messages {
-				msgBytes, bytesErr := msg.ToBytes()
-				if bytesErr != nil {
-					writeConn(conn, []byte(bytesErr.Error()))
-				} else {
-					writeConn(conn, msgBytes)
+			log.Printf("offset %d, size %d loading messages: %v ", offset, size, messages)
+			if len(messages) > 0 {
+				for _, msg := range messages {
+					msgBytes, bytesErr := msg.ToBytes()
+					if bytesErr != nil {
+						writeConn(conn, []byte(bytesErr.Error()))
+					} else {
+						writeConn(conn, msgBytes)
+					}
+					time.Sleep(time.Second * 1)
 				}
-				time.Sleep(time.Second * 1)
+				messages = nil
+				offset += size
 			}
-			offset += size
 		}
 
 	}()
