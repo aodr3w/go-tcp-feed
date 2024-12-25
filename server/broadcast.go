@@ -36,19 +36,7 @@ func (bc *Broadcast) WriteV2(data []byte) error {
 }
 
 func (bc *Broadcast) LoadMessages(offset int, size int) ([]db.Message, error) {
-	/*called by client when chat is first open
-	it loads message history
-	*/
-	messages, err := bc.dao.GetMessages(size, offset)
-	if err != nil {
-		return nil, err
-	}
-	return messages, nil
-}
-
-func (bc *Broadcast) ReadMessages(userId int, offset int, size int) ([]db.Message, error) {
-	/*retrieves all messages that were `sent` to the user*/
-	messages, err := bc.dao.GetReceivedMessages(userId, size, offset)
+	messages, err := bc.dao.GetMessages(size, offset, db.Latest)
 	if err != nil {
 		return nil, err
 	}
