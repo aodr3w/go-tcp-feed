@@ -97,7 +97,6 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 	}
 	//load messages first
 	messages, err := broadcast.LoadMessages(0, 100)
-
 	if err != nil {
 		conn.Write([]byte(fmt.Sprintf("error loading messages %s\n", err.Error())))
 		return
@@ -110,32 +109,31 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 			return
 		}
 		writeConn(conn, msgBytes)
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	go func() {
-		offset := 0
+		offset := len(messages)
 		size := 5
 		for {
 			//load 5 of the newest messages in db
 			//and write them to a connection at an interval of 1 second
-			messages, err := dao.GetMessages(size, offset, db.Latest)
+			latestMessages, err := dao.GetMessages(size, offset, db.Latest)
 			if err != nil {
 				writeConn(conn, []byte(err.Error()))
 				return
 			}
-			log.Printf("offset %d, size %d loading messages: %v ", offset, size, messages)
-			if len(messages) > 0 {
-				for _, msg := range messages {
+			if len(latestMessages) > 0 {
+				for _, msg := range latestMessages {
 					msgBytes, bytesErr := msg.ToBytes()
 					if bytesErr != nil {
 						writeConn(conn, []byte(bytesErr.Error()))
 					} else {
 						writeConn(conn, msgBytes)
 					}
-					time.Sleep(time.Second * 1)
+					time.Sleep(40 * time.Millisecond)
 				}
-				messages = nil
-				offset += size
+				offset += len(latestMessages)
 			}
 		}
 
