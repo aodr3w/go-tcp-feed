@@ -83,7 +83,17 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 
 		}
 	} else {
-		conn.Write([]byte(fmt.Sprintf("userID-%s", existingUser.Name)))
+		msg := db.Message{
+			Name:      "system",
+			Text:      fmt.Sprintf("userID-%s", existingUser.Name),
+			CreatedAt: time.Now(),
+		}
+		b, err := msg.ToBytes()
+		if err != nil {
+			log.Println("error serializing message", err.Error())
+			return
+		}
+		conn.Write(b)
 	}
 	//load messages first
 	messages, err := broadcast.LoadMessages(0, 100)

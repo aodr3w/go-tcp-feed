@@ -86,7 +86,6 @@ func readtoStdOut(conn net.Conn, stop chan struct{}) {
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
-
 			if errors.Is(err, io.EOF) {
 				log.Println("server closed the connection")
 			} else if opErr, ok := err.(*net.OpError); ok && strings.Contains(opErr.Err.Error(), "use of closed network connection") {
@@ -97,7 +96,12 @@ func readtoStdOut(conn net.Conn, stop chan struct{}) {
 			close(stop)
 			return
 		}
-		recv := string(buf[:n])
-		fmt.Printf("%s\n>> ", recv)
+		msg, err := db.FromBytes(buf[:n])
+		if err != nil {
+			fmt.Printf("serialization error: %s\n>>", err)
+		} else {
+			fmt.Printf("%s\n>> ", msg.Text)
+		}
+
 	}
 }
