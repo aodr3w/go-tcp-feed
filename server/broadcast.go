@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+	"log"
 	"sync"
 
 	"github.com/aodr3w/go-chat/db"
@@ -22,17 +24,19 @@ func NewBroadCast(dao *db.Dao) *Broadcast {
 	}
 }
 
-func (bc *Broadcast) Write(data []byte) {
-	bc.m.Lock()
-	defer bc.m.Unlock()
-	bc.data = append(bc.data, data)
-}
+func (bc *Broadcast) Write(data []byte) error {
+	msg, err := db.FromBytes(data)
+	if err != nil {
+		return fmt.Errorf("error serializing message from bytes %w", err)
+	}
+	sender, err := bc.dao.GetUserByName(msg.Name)
 
-func (bc *Broadcast) WriteV2(data []byte) error {
-	//serialize data into message struct
-	//must contain author information e.g userId
-	//insert message into database
-	return nil
+	if err != nil {
+		return fmt.Errorf("error getting user associated with message %w", err)
+	}
+
+	log.Printf("message sender %v", sender)
+	return bc.dao.InsertUserMessage(sender.ID, msg.Name)
 }
 
 func (bc *Broadcast) LoadMessages(offset int, size int) ([]db.Message, error) {

@@ -36,6 +36,13 @@ func readConn(conn net.Conn) (data []byte, err error) {
 	return buf[:n], nil
 }
 
+func writeConn(conn net.Conn, data []byte) {
+	_, err := conn.Write(data)
+	if err != nil {
+		log.Println(fmt.Sprintf("[writeConnError] %v", err))
+	}
+}
+
 func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 	defer conn.Close()
 	//read latest message from broadcast queue
@@ -54,47 +61,72 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 		return
 	}
 	//check if name is already taken if so return an error
-	_, err = dao.GetUserByName(name)
+	existingUser, err := dao.GetUserByName(name)
 
 	if err != nil {
 		if errors.Is(err, &db.UserNotFoundError) {
 			//create new user and respond with userID that the client should save
 			newUser, err := dao.CreateUser(name)
 			if err != nil {
-				conn.Write([]byte(err.Error()))
+				writeConn(conn, []byte(err.Error()))
 				return
 			}
 
 			if len(newUser.Name) < 1 {
-				conn.Write([]byte(fmt.Sprintf("[Internal Server Error] invalid user data")))
+				writeConn(conn, []byte(fmt.Sprintf("[Internal Server Error] invalid user data")))
 				return
 			}
 
 			conn.Write([]byte(fmt.Sprintf("userID-%s", newUser.Name)))
 		} else {
-			log.Printf("[getUserError]  %v\n", err)
-			conn.Write([]byte(err.Error()))
+			writeConn(conn, []byte(err.Error()))
 			return
 
 		}
+	} else {
+		conn.Write([]byte(fmt.Sprintf("userID-%s", existingUser.Name)))
+	}
+
+	//load messages first
+	messages, err := broadcast.LoadMessages(0, 100)
+
+	if err != nil {
+		conn.Write([]byte(fmt.Sprintf("error loading messages %s\n", err.Error())))
+		return
+	}
+
+	for _, message := range messages {
+		msgBytes, err := message.ToBytes()
+		if err != nil {
+			writeConn(conn, []byte(err.Error()))
+			return
+		}
+		writeConn(conn, msgBytes)
 	}
 
 	go func() {
+		offset := 0
+		size := 5
 		for {
-			latestMsg := broadcast.Read(name)
-			//write latest message from broadcast for this connection
-			//back to the client
-			if len(latestMsg) > 0 {
-				//write the message the client sent to the br
-				_, writeErr := conn.Write(latestMsg)
-				if writeErr != nil {
-					log.Printf("error writing to conn: %s\n", writeErr)
-					return
-				}
+			//load 5 of the newest messages in db
+			//and write them to a connection at an interval of 1 second
+			messages, err := dao.GetMessages(size, offset, db.Latest)
+			if err != nil {
+				writeConn(conn, []byte(err.Error()))
+				return
 			}
-			time.Sleep(1 * time.Second)
-
+			for _, msg := range messages {
+				msgBytes, bytesErr := msg.ToBytes()
+				if bytesErr != nil {
+					writeConn(conn, []byte(bytesErr.Error()))
+				} else {
+					writeConn(conn, msgBytes)
+				}
+				time.Sleep(time.Second * 1)
+			}
+			offset += size
 		}
+
 	}()
 
 	for {
@@ -104,8 +136,11 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 			log.Printf("%v\n", err)
 			return
 		}
-		broadcast.Write([]byte(fmt.Sprintf("%s: %s", name, recv)))
-		log.Printf("message %s pushed\n", string(recv))
+		err = broadcast.Write([]byte(fmt.Sprintf("%s: %s", name, recv)))
+		if err != nil {
+			writeConn(conn, []byte(err.Error()))
+			return
+		}
 	}
 }
 
