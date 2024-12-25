@@ -14,6 +14,11 @@ import (
 
 var conn *sql.DB
 
+type MessageOrder string
+
+var Latest MessageOrder = "DESC"
+var Oldest MessageOrder = "ASC"
+
 func execSQL(cmd string) error {
 	_, err := conn.Exec(cmd)
 	return err
@@ -151,11 +156,10 @@ func (dao Dao) InsertUserMessage(userID int, message string) error {
 	return nil
 }
 
-func (dao Dao) GetMessages(size int, offset int) ([]Message, error) {
-	query := `
-		SELECT * from messages ORDER BY created_at ASC
-		LIMIT $1 OFFSET $2
-	`
+func (dao Dao) GetMessages(size int, offset int, mo MessageOrder) ([]Message, error) {
+
+	query := fmt.Sprintf(`SELECT * from messages ORDER BY created_at %s LIMIT $1 OFFSET $2`, mo)
+
 	rows, err := dao.Query(query, size, offset)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving messages %w", err)
