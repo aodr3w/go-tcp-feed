@@ -41,7 +41,7 @@ func (bc *Broadcast) Write(data []byte) error {
 }
 
 func (bc *Broadcast) LoadMessages(offset int, size int) ([]db.Message, error) {
-	messages, err := bc.dao.GetMessages(size, offset, db.Latest)
+	messages, err := bc.dao.GetMessages(size, offset, db.Oldest)
 	if err != nil {
 		return nil, err
 	}
