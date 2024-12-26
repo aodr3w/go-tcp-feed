@@ -5,17 +5,17 @@ import (
 	"log"
 	"sync"
 
-	"github.com/aodr3w/go-chat/db"
+	"github.com/aodr3w/go-chat/data"
 )
 
 type Broadcast struct {
 	m       *sync.RWMutex
 	data    [][]byte
 	readIdx map[string]int
-	dao     *db.Dao
+	dao     *data.Dao
 }
 
-func NewBroadCast(dao *db.Dao) *Broadcast {
+func NewBroadCast(dao *data.Dao) *Broadcast {
 	return &Broadcast{
 		m:       &sync.RWMutex{},
 		data:    make([][]byte, 0),
@@ -24,8 +24,8 @@ func NewBroadCast(dao *db.Dao) *Broadcast {
 	}
 }
 
-func (bc *Broadcast) Write(data []byte) error {
-	msg, err := db.FromBytes(data)
+func (bc *Broadcast) Write(d []byte) error {
+	msg, err := data.FromBytes(d)
 	if err != nil {
 		return fmt.Errorf("error serializing message from bytes %w", err)
 	}
@@ -40,8 +40,8 @@ func (bc *Broadcast) Write(data []byte) error {
 	return bc.dao.InsertUserMessage(sender.ID, msg.Text)
 }
 
-func (bc *Broadcast) LoadMessages(offset int, size int) ([]db.Message, error) {
-	messages, err := bc.dao.GetMessages(size, offset, db.Oldest)
+func (bc *Broadcast) LoadMessages(offset int, size int) ([]data.Message, error) {
+	messages, err := bc.dao.GetMessages(size, offset, data.Oldest)
 	if err != nil {
 		return nil, err
 	}

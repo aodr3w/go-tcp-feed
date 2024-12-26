@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aodr3w/go-chat/db"
+	"github.com/aodr3w/go-chat/data"
 )
 
 func readMsg() string {
@@ -58,7 +58,7 @@ func Start(serverPort int) error {
 			break
 		}
 
-		msg := db.Message{
+		msg := data.Message{
 			Name:      name,
 			Text:      txt,
 			CreatedAt: time.Now(),
@@ -96,7 +96,7 @@ func readtoStdOut(conn net.Conn, stop chan struct{}) {
 			close(stop)
 			return
 		}
-		msg, err := db.FromBytes(buf[:n])
+		msg, err := data.FromBytes(buf[:n])
 		if err != nil {
 			fmt.Printf("serialization error: %s\n>>", err)
 		} else {

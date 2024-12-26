@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aodr3w/go-chat/db"
+	"github.com/aodr3w/go-chat/data"
 )
 
 func extractName(conn net.Conn, data []byte) (string, error) {
@@ -43,7 +43,7 @@ func writeConn(conn net.Conn, data []byte) {
 	}
 }
 
-func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
+func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 	defer conn.Close()
 	initial, err := readConn(conn)
 
@@ -62,7 +62,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 	existingUser, err := dao.GetUserByName(name)
 
 	if err != nil {
-		if errors.Is(err, &db.UserNotFoundError) {
+		if errors.Is(err, &data.UserNotFoundError) {
 			//create new user and respond with userID that the client should save
 			newUser, err := dao.CreateUser(name)
 			if err != nil {
@@ -81,7 +81,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 
 		}
 	} else {
-		msg := db.Message{
+		msg := data.Message{
 			Name:      "system",
 			Text:      fmt.Sprintf("userID-%s", existingUser.Name),
 			CreatedAt: time.Now(),
@@ -116,7 +116,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 		for {
 			//load 5 of the newest messages in db
 			//and write them to a connection at an interval of 1 second
-			latestMessages, err := dao.GetMessages(size, offset, db.Latest)
+			latestMessages, err := dao.GetMessages(size, offset, data.Latest)
 			if err != nil {
 				writeConn(conn, []byte(err.Error()))
 				return
@@ -152,7 +152,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 	}
 }
 
-func Start(SERVER_PORT int, broadcast *Broadcast, dao *db.Dao) error {
+func Start(SERVER_PORT int, broadcast *Broadcast, dao *data.Dao) error {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", SERVER_PORT))
 	if err != nil {
 		return err
