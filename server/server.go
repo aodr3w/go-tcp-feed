@@ -45,8 +45,6 @@ func writeConn(conn net.Conn, data []byte) {
 
 func handleConnection(conn net.Conn, broadcast *Broadcast, dao *db.Dao) {
 	defer conn.Close()
-	//read latest message from broadcast queue
-	//TODO add a readALL function that loads all messages from earliest to last when connection is first established
 	initial, err := readConn(conn)
 
 	if err != nil {
