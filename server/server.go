@@ -58,14 +58,12 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 		log.Printf("%v\n", err)
 		return
 	}
-	var user *data.User
 	//check if name is already taken if so return an error
-	user, err = dao.GetUserByName(name)
-
+	user, err := dao.GetUserByName(name)
 	if err != nil {
 		if errors.Is(err, &data.UserNotFoundError) {
 			//create new user and respond with userID that the client should save
-			user, err := dao.CreateUser(name)
+			user, err = dao.CreateUser(name)
 			if err != nil {
 				writeConn(conn, []byte(err.Error()))
 				return
@@ -74,29 +72,27 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 				writeConn(conn, []byte(fmt.Sprintf("[Internal Server Error] invalid user data")))
 				return
 			}
-
-			conn.Write([]byte(fmt.Sprintf("userID-%s", user.Name)))
+			log.Printf("user successfully created: %v", user)
 		} else {
+			log.Printf("unknown error type: %v", err)
 			writeConn(conn, []byte(err.Error()))
 			return
-
 		}
-	} else {
-		msg := data.Message{
-			Name:      "system",
-			Text:      fmt.Sprintf("userID-%s", user.Name),
-			CreatedAt: time.Now(),
-		}
-		b, err := msg.ToBytes()
-		if err != nil {
-			log.Println("error serializing message", err.Error())
-			return
-		}
-		conn.Write(b)
 	}
 
-	ct := time.Now()
+	msg := data.Message{
+		Name:      "system",
+		Text:      fmt.Sprintf("userID-%s", user.Name),
+		CreatedAt: time.Now(),
+	}
+	b, err := msg.ToBytes()
+	if err != nil {
+		log.Println("error serializing message", err.Error())
+		return
+	}
+	conn.Write(b)
 
+	ct := time.Now()
 	//load messages first
 	messages, err := broadcast.LoadMessages(0, 100, ct)
 	if err != nil {
@@ -113,7 +109,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 		writeConn(conn, msgBytes)
 		time.Sleep(50 * time.Millisecond)
 	}
-
+	log.Printf("user %v, ct: %v\n", user, ct)
 	go func() {
 		offset := 0
 		size := 5
