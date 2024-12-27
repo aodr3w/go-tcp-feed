@@ -15,8 +15,15 @@ import (
 )
 
 func readMsg() string {
+	fmt.Print("<< ")
 	reader := bufio.NewReader(os.Stdin)
-	msg, _ := reader.ReadString('\n')
+
+	msg, err := reader.ReadString('\n')
+	if err != nil {
+		log.Printf("error reading input: %v", err)
+		return ""
+	}
+
 	return strings.TrimSpace(msg)
 }
 
@@ -51,9 +58,11 @@ func Start(serverPort int) error {
 	go readtoStdOut(conn, stop)
 
 	fmt.Println("enter name or q to quit")
-	fmt.Print(">> ")
 	for {
 		txt := readMsg()
+		if len(txt) == 0 {
+			continue
+		}
 		if strings.EqualFold(txt, "q") {
 			break
 		}
@@ -72,8 +81,6 @@ func Start(serverPort int) error {
 				log.Fatal(err)
 			}
 		}
-
-		fmt.Print(">> ")
 	}
 	conn.Close()
 	<-stop
@@ -89,7 +96,7 @@ func readtoStdOut(conn net.Conn, stop chan struct{}) {
 			if errors.Is(err, io.EOF) {
 				log.Println("server closed the connection")
 			} else if opErr, ok := err.(*net.OpError); ok && strings.Contains(opErr.Err.Error(), "use of closed network connection") {
-				fmt.Print()
+				fmt.Print("")
 			} else {
 				log.Printf("error reading from conn: %s\n", err)
 			}
@@ -98,11 +105,10 @@ func readtoStdOut(conn net.Conn, stop chan struct{}) {
 		}
 		msg, err := data.FromBytes(buf[:n])
 		if err != nil {
-			fmt.Printf("serialization error: %s\n>>", err)
+			fmt.Printf(">> serialization error: %s\n", err)
 		} else {
 			formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
-			fmt.Printf("%s [ %s - %s ]\n>> ", msg.Text, msg.Name, formattedTime)
+			fmt.Printf(">> %s [ %s - %s ]\n", msg.Text, msg.Name, formattedTime)
 		}
-
 	}
 }
