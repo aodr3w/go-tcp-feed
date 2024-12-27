@@ -100,8 +100,8 @@ func readtoStdOut(conn net.Conn, stop chan struct{}) {
 		if err != nil {
 			fmt.Printf("serialization error: %s\n>>", err)
 		} else {
-			ft := msg.CreatedAt.Format("2006-01-02 15:04:05")
-			fmt.Printf("[%s-%s] %s \n>> ", msg.Name, ft, msg.Text)
+			formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
+			fmt.Printf("%s [ %s - %s ]\n>> ", msg.Text, msg.Name, formattedTime)
 		}
 
 	}
