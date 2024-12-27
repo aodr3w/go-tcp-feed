@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/aodr3w/go-chat/data"
 )
@@ -40,8 +41,8 @@ func (bc *Broadcast) Write(d []byte) error {
 	return bc.dao.InsertUserMessage(sender.ID, msg.Text)
 }
 
-func (bc *Broadcast) LoadMessages(offset int, size int) ([]data.Message, error) {
-	messages, err := bc.dao.GetMessages(size, offset, data.Oldest)
+func (bc *Broadcast) LoadMessages(offset int, size int, maxTime time.Time) ([]data.Message, error) {
+	messages, err := bc.dao.GetMessages(size, offset, data.Oldest, maxTime)
 	if err != nil {
 		return nil, err
 	}

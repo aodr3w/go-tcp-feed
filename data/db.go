@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/lib/pq"
@@ -33,7 +34,6 @@ func InitDB() error {
 	password := os.Getenv("PG_PASS")
 	db := os.Getenv("DB_NAME")
 	connStr := fmt.Sprintf("postgres://%s:%s@localhost:5432/%s?sslmode=disable", user, password, db)
-	log.Println("postgres DSN: ", connStr)
 	conn, err = sql.Open("postgres", connStr)
 	if err != nil {
 		return fmt.Errorf("error opening database: %w", err)
@@ -113,18 +113,18 @@ func (dao Dao) GetUserByName(name string) (*User, error) {
 	return &user, nil
 }
 
-func (dao Dao) GetReceivedMessages(userID int, size int, offset int) ([]Message, error) {
+func (dao Dao) GetReceivedMessages(userID int, size int, offset int, minTime time.Time) ([]Message, error) {
 	//Get other messages other than current users messages
 	query := `
 	SELECT m.id, u.name, m.text, m.created_at
 	FROM messages m
 	JOIN users u on m.user_id = u.id
 	WHERE u.id != $1
+	AND created_at >= $2
 	ORDER BY m.created_at ASC
-	LIMIT $2 OFFSET $3
+	LIMIT $3 OFFSET $4
 	`
-	log.Printf("getting received messages userID %d, size %d offset %d\n", userID, size, offset)
-	rows, err := dao.Query(query, userID, size, offset)
+	rows, err := dao.Query(query, userID, minTime, size, offset)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving messages for user %d: %w", userID, err)
 	}
@@ -142,7 +142,6 @@ func (dao Dao) GetReceivedMessages(userID int, size int, offset int) ([]Message,
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over messages: %w", err)
 	}
-	log.Println("latest messages: ", messages)
 	return messages, nil
 }
 
@@ -159,15 +158,16 @@ func (dao Dao) InsertUserMessage(userID int, message string) error {
 	return nil
 }
 
-func (dao Dao) GetMessages(size int, offset int, mo MessageOrder) ([]Message, error) {
+func (dao Dao) GetMessages(size int, offset int, mo MessageOrder, maxTime time.Time) ([]Message, error) {
 
 	query := fmt.Sprintf(
 		`
 		SELECT m.id, u.name, m.text, m.created_at FROM
 		messages m JOIN users u on m.user_id = u.id
+		WHERE m.created_at <= $3
 		ORDER BY m.created_at %s LIMIT $1 OFFSET $2
 		`, mo)
-	rows, err := dao.Query(query, size, offset)
+	rows, err := dao.Query(query, size, offset, maxTime)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving messages %w", err)
 	}
