@@ -24,3 +24,10 @@ remove-volume:
 open-db:
 	docker exec -it go_chat_db \
 	psql -U ${DB_USER} -d ${DB_NAME}
+
+
+front:
+	go run main.go --client
+
+back:
+	go run main.go --server
