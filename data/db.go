@@ -135,6 +135,7 @@ func (dao Dao) GetReceivedMessages(userID int, size int, offset int) ([]Message,
 		if err := rows.Scan(&msg.ID, &msg.Name, &msg.Text, &msg.CreatedAt); err != nil {
 			return nil, fmt.Errorf("error scanning message row: %w", err)
 		}
+		//get associated user name
 		messages = append(messages, msg)
 	}
 	if err := rows.Err(); err != nil {
@@ -158,8 +159,12 @@ func (dao Dao) InsertUserMessage(userID int, message string) error {
 
 func (dao Dao) GetMessages(size int, offset int, mo MessageOrder) ([]Message, error) {
 
-	query := fmt.Sprintf(`SELECT * from messages ORDER BY created_at %s LIMIT $1 OFFSET $2`, mo)
-
+	query := fmt.Sprintf(
+		`
+		SELECT m.id, u.name, m.text, m.created_at FROM
+		messages m JOIN users u on m.user_id = u.id
+		ORDER BY m.created_at %s LIMIT $1 OFFSET $2
+		`, mo)
 	rows, err := dao.Query(query, size, offset)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving messages %w", err)
