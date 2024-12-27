@@ -26,6 +26,11 @@ open-db:
 	psql -U ${DB_USER} -d ${DB_NAME}
 
 
+db:
+	@MAKE stop-db
+	@MAKE remove-volume
+	@MAKE start-db
+
 front:
 	go run main.go --client
 
