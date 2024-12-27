@@ -120,7 +120,7 @@ func (dao Dao) GetReceivedMessages(userID int, size int, offset int, minTime tim
 	FROM messages m
 	JOIN users u on m.user_id = u.id
 	WHERE u.id != $1
-	AND created_at >= $2
+	AND m.created_at >= $2
 	ORDER BY m.created_at ASC
 	LIMIT $3 OFFSET $4
 	`

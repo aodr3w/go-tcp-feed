@@ -39,7 +39,7 @@ func FromBytes(data []byte) (*Message, error) {
 	decoder := gob.NewDecoder(buf)
 	err := decoder.Decode(&msg)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding message: %w", err)
+		return nil, err
 	}
 	return &msg, nil
 }
