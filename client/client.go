@@ -94,7 +94,7 @@ func readtoStdOut(conn net.Conn, stop chan struct{}) {
 		n, err := conn.Read(buf)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				log.Println("server closed the connection")
+				continue
 			} else if opErr, ok := err.(*net.OpError); ok && strings.Contains(opErr.Err.Error(), "use of closed network connection") {
 				fmt.Print("")
 			} else {
