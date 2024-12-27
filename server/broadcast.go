@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -30,7 +29,6 @@ func (bc *Broadcast) Write(d []byte) error {
 	if err != nil {
 		return fmt.Errorf("error serializing message from bytes %w", err)
 	}
-	log.Printf("received message: %v\n", msg)
 
 	sender, err := bc.dao.GetUserByName(msg.Name)
 
