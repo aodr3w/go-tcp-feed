@@ -58,23 +58,24 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 		log.Printf("%v\n", err)
 		return
 	}
+	var user *data.User
 	//check if name is already taken if so return an error
-	existingUser, err := dao.GetUserByName(name)
+	user, err = dao.GetUserByName(name)
 
 	if err != nil {
 		if errors.Is(err, &data.UserNotFoundError) {
 			//create new user and respond with userID that the client should save
-			newUser, err := dao.CreateUser(name)
+			user, err := dao.CreateUser(name)
 			if err != nil {
 				writeConn(conn, []byte(err.Error()))
 				return
 			}
-			if len(newUser.Name) < 1 {
+			if len(user.Name) < 1 {
 				writeConn(conn, []byte(fmt.Sprintf("[Internal Server Error] invalid user data")))
 				return
 			}
 
-			conn.Write([]byte(fmt.Sprintf("userID-%s", newUser.Name)))
+			conn.Write([]byte(fmt.Sprintf("userID-%s", user.Name)))
 		} else {
 			writeConn(conn, []byte(err.Error()))
 			return
@@ -83,7 +84,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 	} else {
 		msg := data.Message{
 			Name:      "system",
-			Text:      fmt.Sprintf("userID-%s", existingUser.Name),
+			Text:      fmt.Sprintf("userID-%s", user.Name),
 			CreatedAt: time.Now(),
 		}
 		b, err := msg.ToBytes()
@@ -111,12 +112,12 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 	}
 
 	go func() {
-		offset := len(messages)
+		offset := 0
 		size := 5
 		for {
 			//load 5 of the newest messages in db
 			//and write them to a connection at an interval of 1 second
-			latestMessages, err := dao.GetMessages(size, offset, data.Latest)
+			latestMessages, err := dao.GetReceivedMessages(user.ID, size, offset)
 			if err != nil {
 				writeConn(conn, []byte(err.Error()))
 				return

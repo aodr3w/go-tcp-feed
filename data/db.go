@@ -123,6 +123,7 @@ func (dao Dao) GetReceivedMessages(userID int, size int, offset int) ([]Message,
 	ORDER BY m.created_at ASC
 	LIMIT $2 OFFSET $3
 	`
+	log.Printf("getting received messages userID %d, size %d offset %d\n", userID, size, offset)
 	rows, err := dao.Query(query, userID, size, offset)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving messages for user %d: %w", userID, err)
@@ -141,6 +142,7 @@ func (dao Dao) GetReceivedMessages(userID int, size int, offset int) ([]Message,
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over messages: %w", err)
 	}
+	log.Println("latest messages: ", messages)
 	return messages, nil
 }
 
