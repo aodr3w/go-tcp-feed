@@ -16,15 +16,13 @@ import (
 	"github.com/aodr3w/go-chat/data"
 )
 
-var (
-	clientMutex *sync.Mutex
-)
+var clientMutex = sync.Mutex{}
 
 func readMsg(cm *sync.Mutex) string {
 	reader := bufio.NewReader(os.Stdin)
 	cm.Lock()
 	defer cm.Unlock()
-	fmt.Println(">>")
+	fmt.Print(">>")
 	msg, err := reader.ReadString('\n')
 	if err != nil {
 		log.Printf("error reading input: %v", err)
@@ -42,7 +40,7 @@ func Start(serverPort int) error {
 
 	for {
 		fmt.Print("name: ")
-		name = readMsg(clientMutex)
+		name = readMsg(&clientMutex)
 		if len(name) <= 3 {
 			fmt.Println("name should be atleast 3 characters")
 			continue
@@ -66,11 +64,11 @@ func Start(serverPort int) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go readConn(conn, inbound, cancel)
-	go writetoStdOut(inbound, stop, clientMutex, ctx)
+	go writetoStdOut(inbound, stop, &clientMutex, ctx)
 
 	fmt.Println("enter message or q to quit")
 	for {
-		txt := readMsg(clientMutex)
+		txt := readMsg(&clientMutex)
 		if len(txt) == 0 {
 			continue
 		}
@@ -121,19 +119,17 @@ func readConn(conn net.Conn, inbound chan *data.Message, cancelFunc context.Canc
 		}
 	}
 }
-func writetoStdOut(inbound chan *data.Message, stop chan struct{}, mx *sync.Mutex, ctx context.Context) {
+func writetoStdOut(inbound chan *data.Message, stop chan struct{}, cm *sync.Mutex, ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			close(stop)
 			return
 		case msg := <-inbound:
-			mx.Lock()
+			cm.Lock()
 			formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
 			fmt.Printf(">> %s [ %s - %s ]\n", msg.Text, msg.Name, formattedTime)
-		default:
-			//unlock in the default case which will allow another goroutine to work
-			mx.Unlock()
+			cm.Unlock()
 		}
 	}
 
