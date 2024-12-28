@@ -2,6 +2,7 @@ package client
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -9,14 +10,21 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aodr3w/go-chat/data"
 )
 
-func readMsg() string {
-	reader := bufio.NewReader(os.Stdin)
+var (
+	clientMutex *sync.Mutex
+)
 
+func readMsg(cm *sync.Mutex) string {
+	reader := bufio.NewReader(os.Stdin)
+	cm.Lock()
+	defer cm.Unlock()
+	fmt.Println(">>")
 	msg, err := reader.ReadString('\n')
 	if err != nil {
 		log.Printf("error reading input: %v", err)
@@ -28,11 +36,13 @@ func readMsg() string {
 
 func Start(serverPort int) error {
 	stop := make(chan struct{}, 1)
+	inbound := make(chan *data.Message, 100)
+
 	var name string
 
 	for {
 		fmt.Print("name: ")
-		name = readMsg()
+		name = readMsg(clientMutex)
 		if len(name) <= 3 {
 			fmt.Println("name should be atleast 3 characters")
 			continue
@@ -54,11 +64,13 @@ func Start(serverPort int) error {
 		return err
 	}
 
-	go readtoStdOut(conn, stop)
+	ctx, cancel := context.WithCancel(context.Background())
+	go readConn(conn, inbound, cancel)
+	go writetoStdOut(inbound, stop, clientMutex, ctx)
 
 	fmt.Println("enter message or q to quit")
 	for {
-		txt := readMsg()
+		txt := readMsg(clientMutex)
 		if len(txt) == 0 {
 			continue
 		}
@@ -86,10 +98,9 @@ func Start(serverPort int) error {
 	return nil
 
 }
-
-func readtoStdOut(conn net.Conn, stop chan struct{}) {
-	buf := make([]byte, 1024)
+func readConn(conn net.Conn, inbound chan *data.Message, cancelFunc context.CancelFunc) {
 	for {
+		buf := make([]byte, 1024)
 		n, err := conn.Read(buf)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -99,15 +110,31 @@ func readtoStdOut(conn net.Conn, stop chan struct{}) {
 			} else {
 				log.Printf("error reading from conn: %s\n", err)
 			}
-			close(stop)
+			cancelFunc()
 			return
 		}
 		msg, err := data.FromBytes(buf[:n])
 		if err != nil {
 			fmt.Printf(">> serialization error: %s\n", err)
 		} else {
-			formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
-			fmt.Printf(">> %s [ %s - %s ]\n", msg.Text, msg.Name, formattedTime)
+			inbound <- msg
 		}
 	}
+}
+func writetoStdOut(inbound chan *data.Message, stop chan struct{}, mx *sync.Mutex, ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			close(stop)
+			return
+		case msg := <-inbound:
+			mx.Lock()
+			formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
+			fmt.Printf(">> %s [ %s - %s ]\n", msg.Text, msg.Name, formattedTime)
+		default:
+			//unlock in the default case which will allow another goroutine to work
+			mx.Unlock()
+		}
+	}
+
 }
