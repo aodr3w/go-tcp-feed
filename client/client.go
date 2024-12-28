@@ -15,7 +15,6 @@ import (
 )
 
 func readMsg() string {
-	fmt.Print("<< ")
 	reader := bufio.NewReader(os.Stdin)
 
 	msg, err := reader.ReadString('\n')
@@ -57,7 +56,7 @@ func Start(serverPort int) error {
 
 	go readtoStdOut(conn, stop)
 
-	fmt.Println("enter name or q to quit")
+	fmt.Println("enter message or q to quit")
 	for {
 		txt := readMsg()
 		if len(txt) == 0 {
