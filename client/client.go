@@ -10,37 +10,45 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/aodr3w/go-chat/data"
 )
 
-var clientMutex = sync.Mutex{}
-
-func readMsg(cm *sync.Mutex) string {
+func readName() string {
+	fmt.Print("name: ")
 	reader := bufio.NewReader(os.Stdin)
-	cm.Lock()
-	defer cm.Unlock()
-	fmt.Print(">>")
-	msg, err := reader.ReadString('\n')
+	name, err := reader.ReadString('\n')
 	if err != nil {
 		log.Printf("error reading input: %v", err)
 		return ""
 	}
+	return name
+}
+func readMsg(read chan struct{}, msgChan chan string) {
+	for range read {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print(">>")
+		msg, err := reader.ReadString('\n')
+		if err != nil {
+			log.Printf("error reading input: %v", err)
+			continue
+		}
+		msgChan <- strings.TrimSpace(msg)
+	}
 
-	return strings.TrimSpace(msg)
 }
 
 func Start(serverPort int) error {
 	stop := make(chan struct{}, 1)
 	inbound := make(chan *data.Message, 100)
+	read := make(chan struct{}, 1)
+	msgs := make(chan string, 1)
 
 	var name string
 
 	for {
-		fmt.Print("name: ")
-		name = readMsg(&clientMutex)
+		name = readName()
 		if len(name) <= 3 {
 			fmt.Println("name should be atleast 3 characters")
 			continue
@@ -63,12 +71,21 @@ func Start(serverPort int) error {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	go readConn(conn, inbound, cancel)
-	go writetoStdOut(inbound, stop, &clientMutex, ctx)
 
+	go readInput(conn, name, read, msgs)
+	go readConn(conn, inbound, cancel)
+	go writetoStdOut(read, inbound, stop, ctx)
+	defer conn.Close()
+	<-stop
+	return nil
+
+}
+
+func readInput(conn net.Conn, name string, read chan struct{}, msgs chan string) {
 	fmt.Println("enter message or q to quit")
 	for {
-		txt := readMsg(&clientMutex)
+		readMsg(read, msgs)
+		txt := <-msgs
 		if len(txt) == 0 {
 			continue
 		}
@@ -91,10 +108,6 @@ func Start(serverPort int) error {
 			}
 		}
 	}
-	conn.Close()
-	<-stop
-	return nil
-
 }
 func readConn(conn net.Conn, inbound chan *data.Message, cancelFunc context.CancelFunc) {
 	for {
@@ -119,17 +132,17 @@ func readConn(conn net.Conn, inbound chan *data.Message, cancelFunc context.Canc
 		}
 	}
 }
-func writetoStdOut(inbound chan *data.Message, stop chan struct{}, cm *sync.Mutex, ctx context.Context) {
+func writetoStdOut(read chan struct{}, inbound chan *data.Message, stop chan struct{}, ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			close(stop)
 			return
 		case msg := <-inbound:
-			cm.Lock()
 			formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
 			fmt.Printf(">> %s [ %s - %s ]\n", msg.Text, msg.Name, formattedTime)
-			cm.Unlock()
+		default:
+			read <- struct{}{}
 		}
 	}
 
