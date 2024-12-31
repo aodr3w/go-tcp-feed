@@ -10,10 +10,16 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aodr3w/go-chat/data"
 )
+
+func printMessage(msg *data.Message) {
+	formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
+	fmt.Printf(">> %s [ %s - %s ]\n", msg.Text, msg.Name, formattedTime)
+}
 
 func readName() string {
 	fmt.Print("name: ")
@@ -37,9 +43,11 @@ func readMsg() string {
 }
 
 func Start(serverPort int) error {
-	stop := make(chan struct{}, 1)
-	inbound := make(chan *data.Message, 100)
-	read := make(chan struct{}, 1)
+	startedAt := time.Now()
+	inboundChan := make(chan *data.Message, 100)
+	readChan := make(chan struct{}, 1)
+	historyChan := make(chan *data.Message, 100)
+	cancelHistoryChan := make(chan struct{}, 1)
 
 	var name string
 
@@ -66,18 +74,37 @@ func Start(serverPort int) error {
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	appWg := &sync.WaitGroup{}
+	appCtx, appCancel := context.WithCancel(context.Background())
+	historyCtx, historyCancel := context.WithCancel(context.Background())
 
-	go readInput(conn, name, read)
-	go readConn(conn, inbound, cancel)
-	go writetoStdOut(read, inbound, stop, ctx)
+	go loadHistory(historyCtx, historyChan, readChan)
+	go readInput(conn, name, readChan, appCancel)
+	appWg.Add(1)
+	go readConn(conn, inboundChan, historyChan, cancelHistoryChan, appCtx, appWg, startedAt)
+	appWg.Add(1)
+	go writeSessionMessages(inboundChan, appCtx, cancelHistoryChan, historyCancel, appWg)
 	defer conn.Close()
-	<-stop
+	defer appWg.Wait()
 	return nil
 
 }
 
-func readInput(conn net.Conn, name string, read chan struct{}) {
+func loadHistory(ctx context.Context, historyChan chan *data.Message, readChan chan struct{}) {
+	//loads messages created before the current sessions startedAt time
+	//should be remotely cancelled once the writeSessionMessages is called
+	for {
+		select {
+		case <-ctx.Done():
+			close(historyChan)
+			readChan <- struct{}{}
+			return
+		case msg := <-historyChan:
+			printMessage(msg)
+		}
+	}
+}
+func readInput(conn net.Conn, name string, read chan struct{}, appCancel context.CancelFunc) {
 	fmt.Println("enter message or q to quit")
 	for {
 		<-read
@@ -86,6 +113,7 @@ func readInput(conn net.Conn, name string, read chan struct{}) {
 			continue
 		}
 		if strings.EqualFold(txt, "q") {
+			appCancel()
 			break
 		}
 
@@ -105,40 +133,70 @@ func readInput(conn net.Conn, name string, read chan struct{}) {
 		}
 	}
 }
-func readConn(conn net.Conn, inbound chan *data.Message, cancelFunc context.CancelFunc) {
-	for {
-		buf := make([]byte, 1024)
-		n, err := conn.Read(buf)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				continue
-			} else if opErr, ok := err.(*net.OpError); ok && strings.Contains(opErr.Err.Error(), "use of closed network connection") {
-				fmt.Print("")
-			} else {
-				log.Printf("error reading from conn: %s\n", err)
-			}
-			cancelFunc()
-			return
-		}
-		msg, err := data.FromBytes(buf[:n])
-		if err != nil {
-			fmt.Printf(">> serialization error: %s\n", err)
-		} else {
-			inbound <- msg
-		}
-	}
-}
-func writetoStdOut(read chan struct{}, inbound chan *data.Message, stop chan struct{}, ctx context.Context) {
+func readConn(
+	conn net.Conn,
+	inboundChan chan *data.Message,
+	historyChan chan *data.Message,
+	cancelHistoryChan chan struct{},
+	appCtx context.Context,
+	appWg *sync.WaitGroup,
+	sessionStartTime time.Time) {
+	cancelHistorySent := false
+	defer appWg.Done()
 	for {
 		select {
-		case <-ctx.Done():
-			close(stop)
+		case <-appCtx.Done():
+			log.Println("[client] stopping readConn function")
 			return
-		case msg := <-inbound:
-			formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
-			fmt.Printf(">> %s [ %s - %s ]\n", msg.Text, msg.Name, formattedTime)
 		default:
-			read <- struct{}{}
+			buf := make([]byte, 1024)
+			n, err := conn.Read(buf)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					continue
+				} else if opErr, ok := err.(*net.OpError); ok && strings.Contains(opErr.Err.Error(), "use of closed network connection") {
+					fmt.Print("")
+				} else {
+					log.Printf("error reading from conn: %s\n", err)
+				}
+				return
+			}
+			msg, err := data.FromBytes(buf[:n])
+			if err != nil {
+				fmt.Printf(">> serialization error: %s\n", err)
+			} else {
+				//if the message is before session start time, its loading history
+				//otherwise its from the current chat session
+				if sessionStartTime.After(msg.CreatedAt) {
+					historyChan <- msg
+				} else {
+					//once inbound messages start coming in, we can send a cancel signal to the cancelHistoryChan
+					if !cancelHistorySent {
+						cancelHistoryChan <- struct{}{}
+						cancelHistorySent = true
+					}
+					inboundChan <- msg
+				}
+
+			}
+		}
+
+	}
+}
+func writeSessionMessages(inboundChan chan *data.Message,
+	appCtx context.Context, cancelHistoryChan chan struct{},
+	cancelHistory context.CancelFunc, appWg *sync.WaitGroup) {
+	//cancel the history goroutine before starting current session
+	defer appWg.Done()
+	for {
+		select {
+		case <-cancelHistoryChan:
+			cancelHistory()
+		case <-appCtx.Done():
+			log.Println("[client] stopping writeSessionMessages")
+			return
+		case msg := <-inboundChan:
+			printMessage(msg)
 		}
 	}
 
