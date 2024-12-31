@@ -25,25 +25,21 @@ func readName() string {
 	}
 	return name
 }
-func readMsg(read chan struct{}, msgChan chan string) {
-	for range read {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print(">>")
-		msg, err := reader.ReadString('\n')
-		if err != nil {
-			log.Printf("error reading input: %v", err)
-			continue
-		}
-		msgChan <- strings.TrimSpace(msg)
+func readMsg() string {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print(">>")
+	msg, err := reader.ReadString('\n')
+	if err != nil {
+		log.Printf("error reading input: %v", err)
+		return ""
 	}
-
+	return strings.TrimSpace(msg)
 }
 
 func Start(serverPort int) error {
 	stop := make(chan struct{}, 1)
 	inbound := make(chan *data.Message, 100)
 	read := make(chan struct{}, 1)
-	msgs := make(chan string, 1)
 
 	var name string
 
@@ -72,7 +68,7 @@ func Start(serverPort int) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	go readInput(conn, name, read, msgs)
+	go readInput(conn, name, read)
 	go readConn(conn, inbound, cancel)
 	go writetoStdOut(read, inbound, stop, ctx)
 	defer conn.Close()
@@ -81,11 +77,11 @@ func Start(serverPort int) error {
 
 }
 
-func readInput(conn net.Conn, name string, read chan struct{}, msgs chan string) {
+func readInput(conn net.Conn, name string, read chan struct{}) {
 	fmt.Println("enter message or q to quit")
 	for {
-		readMsg(read, msgs)
-		txt := <-msgs
+		<-read
+		txt := readMsg()
 		if len(txt) == 0 {
 			continue
 		}
