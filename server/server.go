@@ -92,7 +92,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 	}
 	conn.Write(b)
 
-	ct := time.Now() //TODO this should be sent inside the payload
+	ct := time.Now()
 	//load messages first
 	messages, err := broadcast.LoadMessages(0, 100, ct)
 	if err != nil {
