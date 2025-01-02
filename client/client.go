@@ -57,6 +57,9 @@ func Start(serverPort int) error {
 	//channel for messages before current session
 	historyChan := make(chan *data.Message, 100)
 
+	historyReady := make(chan struct{}, 1)
+	sessionReady := make(chan struct{}, 1)
+
 	var name string
 
 	fmt.Println("TIP: ENTER Q to quit")
@@ -86,23 +89,23 @@ func Start(serverPort int) error {
 
 	appWg := &sync.WaitGroup{}
 	appCtx, appCancel := context.WithCancel(context.Background())
-	historyCtx, historyCancel := context.WithCancel(context.Background())
 
-	go loadHistory(historyCtx, historyChan, readChan)
+	go loadHistory(appCtx, historyChan, readChan, historyReady)
 	go readInput(conn, name, readChan, appCancel)
 	appWg.Add(1)
-	go readConn(conn, inboundChan, historyChan, historyCancel, appCtx, appWg, startedAt)
+	go readConn(conn, inboundChan, historyChan, historyReady, sessionReady, appCtx, appWg, startedAt)
 	appWg.Add(1)
-	go writeSessionMessages(inboundChan, appCtx, appWg, readChan)
+	go writeSessionMessages(inboundChan, appCtx, appWg, readChan, sessionReady)
 	defer conn.Close()
 	defer appWg.Wait()
 	return nil
 
 }
 
-func loadHistory(ctx context.Context, historyChan chan *data.Message, readChan chan struct{}) {
+func loadHistory(ctx context.Context, historyChan chan *data.Message, readChan chan struct{}, ready chan struct{}) {
 	//loads messages created before the current sessions startedAt time
 	//should be remotely cancelled once the writeSessionMessages is called
+	var sentReady bool
 	for {
 		select {
 		case <-ctx.Done():
@@ -111,6 +114,11 @@ func loadHistory(ctx context.Context, historyChan chan *data.Message, readChan c
 			return
 		case msg := <-historyChan:
 			printMessage(msg)
+		default:
+			if !sentReady {
+				ready <- struct{}{}
+				sentReady = true
+			}
 		}
 	}
 }
@@ -146,12 +154,16 @@ func readConn(
 	conn net.Conn,
 	inboundChan chan *data.Message,
 	historyChan chan *data.Message,
-	historyCancel context.CancelFunc,
+	historyReady chan struct{},
+	sessionReady chan struct{},
 	appCtx context.Context,
 	appWg *sync.WaitGroup,
 	sessionStartTime time.Time) {
-	historyCancelled := false
 	defer appWg.Done()
+
+	<-historyReady
+	<-sessionReady
+
 	for {
 		select {
 		case <-appCtx.Done():
@@ -179,11 +191,6 @@ func readConn(
 				if sessionStartTime.After(msg.CreatedAt) {
 					historyChan <- msg
 				} else {
-					//once inbound messages start coming in, we can send a cancel signal to the cancelHistoryChan
-					if !historyCancelled {
-						historyCancel()
-						historyCancelled = true
-					}
 					inboundChan <- msg
 				}
 
@@ -195,9 +202,11 @@ func readConn(
 func writeSessionMessages(inboundChan chan *data.Message,
 	appCtx context.Context, appWg *sync.WaitGroup,
 	readChan chan struct{},
+	sessionReady chan struct{},
 ) {
 	//cancel the history goroutine before starting current session
 	var count int
+	var sessionReadySent bool
 	defer appWg.Done()
 	for {
 		select {
@@ -208,6 +217,11 @@ func writeSessionMessages(inboundChan chan *data.Message,
 			count += 1
 			printMessage(msg)
 			readChan <- struct{}{}
+		default:
+			if !sessionReadySent {
+				sessionReady <- struct{}{}
+				sessionReadySent = true
+			}
 		}
 	}
 
