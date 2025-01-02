@@ -20,21 +20,27 @@ func printMessage(msg *data.Message) {
 	formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
 	fmt.Printf(">> %s [ %s - %s ]\n", msg.Text, msg.Name, formattedTime)
 }
-
+func readStdIn() (string, error) {
+	reader := bufio.NewReader(os.Stdin)
+	txt, err := reader.ReadString('\n')
+	if err != nil {
+		return "", fmt.Errorf("error reading input: %v", err)
+	}
+	return txt, nil
+}
 func readName() string {
 	fmt.Print("name: ")
-	reader := bufio.NewReader(os.Stdin)
-	name, err := reader.ReadString('\n')
+	name, err := readStdIn()
 	if err != nil {
-		log.Printf("error reading input: %v", err)
+		log.Println(err)
 		return ""
 	}
 	return name
 }
+
 func readMsg() string {
-	reader := bufio.NewReader(os.Stdin)
 	fmt.Print(">>")
-	msg, err := reader.ReadString('\n')
+	msg, err := readStdIn()
 	if err != nil {
 		log.Printf("error reading input: %v", err)
 		return ""
@@ -44,12 +50,16 @@ func readMsg() string {
 
 func Start(serverPort int) error {
 	startedAt := time.Now()
+	//channel for messages from current session
 	inboundChan := make(chan *data.Message, 100)
+	//channel to signal a message can be read from the input
 	readChan := make(chan struct{}, 1)
+	//channel for messages before current session
 	historyChan := make(chan *data.Message, 100)
-	cancelHistoryChan := make(chan struct{}, 1)
 
 	var name string
+
+	fmt.Println("TIP: ENTER Q to quit")
 
 	for {
 		name = readName()
@@ -81,9 +91,9 @@ func Start(serverPort int) error {
 	go loadHistory(historyCtx, historyChan, readChan)
 	go readInput(conn, name, readChan, appCancel)
 	appWg.Add(1)
-	go readConn(conn, inboundChan, historyChan, cancelHistoryChan, appCtx, appWg, startedAt)
+	go readConn(conn, inboundChan, historyChan, historyCancel, appCtx, appWg, startedAt)
 	appWg.Add(1)
-	go writeSessionMessages(inboundChan, appCtx, cancelHistoryChan, historyCancel, appWg)
+	go writeSessionMessages(inboundChan, appCtx, appWg, readChan)
 	defer conn.Close()
 	defer appWg.Wait()
 	return nil
@@ -104,10 +114,9 @@ func loadHistory(ctx context.Context, historyChan chan *data.Message, readChan c
 		}
 	}
 }
-func readInput(conn net.Conn, name string, read chan struct{}, appCancel context.CancelFunc) {
-	fmt.Println("enter message or q to quit")
+func readInput(conn net.Conn, name string, readChan chan struct{}, appCancel context.CancelFunc) {
 	for {
-		<-read
+		<-readChan
 		txt := readMsg()
 		if len(txt) == 0 {
 			continue
@@ -137,11 +146,11 @@ func readConn(
 	conn net.Conn,
 	inboundChan chan *data.Message,
 	historyChan chan *data.Message,
-	cancelHistoryChan chan struct{},
+	historyCancel context.CancelFunc,
 	appCtx context.Context,
 	appWg *sync.WaitGroup,
 	sessionStartTime time.Time) {
-	cancelHistorySent := false
+	historyCancelled := false
 	defer appWg.Done()
 	for {
 		select {
@@ -171,9 +180,9 @@ func readConn(
 					historyChan <- msg
 				} else {
 					//once inbound messages start coming in, we can send a cancel signal to the cancelHistoryChan
-					if !cancelHistorySent {
-						cancelHistoryChan <- struct{}{}
-						cancelHistorySent = true
+					if !historyCancelled {
+						historyCancel()
+						historyCancelled = true
 					}
 					inboundChan <- msg
 				}
@@ -184,19 +193,21 @@ func readConn(
 	}
 }
 func writeSessionMessages(inboundChan chan *data.Message,
-	appCtx context.Context, cancelHistoryChan chan struct{},
-	cancelHistory context.CancelFunc, appWg *sync.WaitGroup) {
+	appCtx context.Context, appWg *sync.WaitGroup,
+	readChan chan struct{},
+) {
 	//cancel the history goroutine before starting current session
+	var count int
 	defer appWg.Done()
 	for {
 		select {
-		case <-cancelHistoryChan:
-			cancelHistory()
 		case <-appCtx.Done():
 			log.Println("[client] stopping writeSessionMessages")
 			return
 		case msg := <-inboundChan:
+			count += 1
 			printMessage(msg)
+			readChan <- struct{}{}
 		}
 	}
 
