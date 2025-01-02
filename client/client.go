@@ -51,11 +51,11 @@ func readMsg() string {
 func Start(serverPort int) error {
 	startedAt := time.Now()
 	//channel for messages from current session
-	inboundChan := make(chan *data.Message, 100)
+	inboundChan := make(chan *data.MessagePayload, 100)
 	//channel to signal a message can be read from the input
 	readChan := make(chan struct{}, 1)
 	//channel for messages before current session
-	historyChan := make(chan *data.Message, 100)
+	historyChan := make(chan *data.MessagePayload, 100)
 
 	historyReady := make(chan struct{}, 1)
 	sessionReady := make(chan struct{}, 1)
@@ -90,7 +90,7 @@ func Start(serverPort int) error {
 	appWg := &sync.WaitGroup{}
 	appCtx, appCancel := context.WithCancel(context.Background())
 
-	go loadHistory(appCtx, historyChan, readChan, historyReady)
+	go loadHistory(historyChan, readChan, historyReady)
 	go readInput(conn, name, readChan, appCancel)
 	appWg.Add(1)
 	go readConn(conn, inboundChan, historyChan, historyReady, sessionReady, appCtx, appWg, startedAt)
@@ -102,18 +102,20 @@ func Start(serverPort int) error {
 
 }
 
-func loadHistory(ctx context.Context, historyChan chan *data.Message, readChan chan struct{}, ready chan struct{}) {
+func loadHistory(historyChan chan *data.MessagePayload, readChan chan struct{}, ready chan struct{}) {
 	//loads messages created before the current sessions startedAt time
 	//should be remotely cancelled once the writeSessionMessages is called
 	var sentReady bool
+	var count int
 	for {
 		select {
-		case <-ctx.Done():
-			close(historyChan)
-			readChan <- struct{}{}
-			return
 		case msg := <-historyChan:
-			printMessage(msg)
+			printMessage(&msg.Message)
+			count += 1
+			if count >= msg.Count {
+				readChan <- struct{}{}
+				return
+			}
 		default:
 			if !sentReady {
 				ready <- struct{}{}
@@ -152,8 +154,8 @@ func readInput(conn net.Conn, name string, readChan chan struct{}, appCancel con
 }
 func readConn(
 	conn net.Conn,
-	inboundChan chan *data.Message,
-	historyChan chan *data.Message,
+	inboundChan chan *data.MessagePayload,
+	historyChan chan *data.MessagePayload,
 	historyReady chan struct{},
 	sessionReady chan struct{},
 	appCtx context.Context,
@@ -184,11 +186,12 @@ func readConn(
 			}
 			msg, err := data.FromBytes(buf[:n])
 			if err != nil {
+				//check if its count
 				fmt.Printf(">> serialization error: %s\n", err)
 			} else {
 				//if the message is before session start time, its loading history
 				//otherwise its from the current chat session
-				if sessionStartTime.After(msg.CreatedAt) {
+				if sessionStartTime.After(msg.Message.CreatedAt) {
 					historyChan <- msg
 				} else {
 					inboundChan <- msg
@@ -199,7 +202,7 @@ func readConn(
 
 	}
 }
-func writeSessionMessages(inboundChan chan *data.Message,
+func writeSessionMessages(inboundChan chan *data.MessagePayload,
 	appCtx context.Context, appWg *sync.WaitGroup,
 	readChan chan struct{},
 	sessionReady chan struct{},
@@ -215,7 +218,7 @@ func writeSessionMessages(inboundChan chan *data.Message,
 			return
 		case msg := <-inboundChan:
 			count += 1
-			printMessage(msg)
+			printMessage(&msg.Message)
 			readChan <- struct{}{}
 		default:
 			if !sessionReadySent {

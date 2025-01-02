@@ -58,6 +58,18 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 		log.Printf("%v\n", err)
 		return
 	}
+	//message count
+	count, err := dao.GetMessageCount()
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
+	_, err = conn.Write([]byte(fmt.Sprintf("msg-count:%d", count)))
+
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
 	//check if name is already taken if so return an error
 	user, err := dao.GetUserByName(name)
 	if err != nil {
@@ -94,14 +106,14 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 
 	ct := time.Now()
 	//load messages first
-	messages, err := broadcast.LoadMessages(0, 100, ct)
+	payloads, err := broadcast.LoadMessages(0, 100, ct)
 	if err != nil {
 		conn.Write([]byte(fmt.Sprintf("error loading messages %s\n", err.Error())))
 		return
 	}
 
-	for _, message := range messages {
-		msgBytes, err := message.ToBytes()
+	for _, payload := range payloads {
+		msgBytes, err := payload.ToBytes()
 		if err != nil {
 			writeConn(conn, []byte(err.Error()))
 			return

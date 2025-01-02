@@ -19,7 +19,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	gob.Register(data.Message{})
+	gob.Register(data.MessagePayload{})
 
 	svr := flag.Bool("server", false, "provide to start server")
 	clt := flag.Bool("client", false, "provide to start client")

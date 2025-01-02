@@ -30,21 +30,36 @@ func (bc *Broadcast) Write(d []byte) error {
 		return fmt.Errorf("error serializing message from bytes %w", err)
 	}
 
-	sender, err := bc.dao.GetUserByName(msg.Name)
+	sender, err := bc.dao.GetUserByName(msg.Message.Name)
 
 	if err != nil {
 		return fmt.Errorf("error getting user associated with message %w", err)
 	}
 
-	return bc.dao.InsertUserMessage(sender.ID, msg.Text)
+	return bc.dao.InsertUserMessage(sender.ID, msg.Message.Text)
 }
 
-func (bc *Broadcast) LoadMessages(offset int, size int, maxTime time.Time) ([]data.Message, error) {
-	messages, err := bc.dao.GetMessages(size, offset, data.Oldest, maxTime)
+func (bc *Broadcast) LoadMessages(offset int, size int, maxTime time.Time) ([]data.MessagePayload, error) {
+	count, err := bc.dao.GetMessageCount()
+
 	if err != nil {
 		return nil, err
 	}
-	return messages, nil
+
+	messages, err := bc.dao.GetMessages(size, offset, data.Oldest, maxTime)
+
+	if err != nil {
+		return nil, err
+	}
+
+	messagePayLoads := make([]data.MessagePayload, 0)
+	for _, msg := range messages {
+		messagePayLoads = append(messagePayLoads, data.MessagePayload{
+			Message: msg,
+			Count:   count,
+		})
+	}
+	return messagePayLoads, nil
 }
 
 func (bc *Broadcast) Read(name string) []byte {
