@@ -39,7 +39,7 @@ func readConn(conn net.Conn) (data []byte, err error) {
 func writeConn(conn net.Conn, data []byte) {
 	_, err := conn.Write(data)
 	if err != nil {
-		log.Println(fmt.Sprintf("[writeConnError] %v", err))
+		log.Printf("[writeConnError] %v\n", err)
 	}
 }
 
@@ -69,7 +69,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 				return
 			}
 			if len(user.Name) < 1 {
-				writeConn(conn, []byte(fmt.Sprintf("[Internal Server Error] invalid user data")))
+				writeConn(conn, []byte("[Internal Server Error] invalid user data"))
 				return
 			}
 			log.Printf("user successfully created: %v", user)
@@ -92,7 +92,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 	}
 	conn.Write(b)
 
-	ct := time.Now()
+	ct := time.Now() //TODO this should be sent inside the payload
 	//load messages first
 	messages, err := broadcast.LoadMessages(0, 100, ct)
 	if err != nil {
