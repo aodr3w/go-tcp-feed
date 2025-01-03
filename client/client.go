@@ -56,9 +56,6 @@ func Start(serverPort int) error {
 	readChan := make(chan struct{}, 1)
 	//channel for messages before current session
 	historyChan := make(chan *data.MessagePayload, 100)
-
-	historyReady := make(chan struct{}, 1)
-	sessionReady := make(chan struct{}, 1)
 	connDataChan := make(chan []byte)
 	connErrChan := make(chan error)
 
@@ -92,42 +89,35 @@ func Start(serverPort int) error {
 	appWg := &sync.WaitGroup{}
 	appCtx, appCancel := context.WithCancel(context.Background())
 
-	go loadHistory(historyChan, readChan, historyReady)
+	go loadHistory(historyChan, readChan)
 	go readInput(conn, name, readChan, appCancel)
 	appWg.Add(1)
-	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, historyReady, sessionReady, appCtx, appWg, startedAt)
+	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, appCtx, appWg, startedAt)
 	appWg.Add(1)
 	go readConn(conn, connDataChan, connErrChan)
-	go writeSessionMessages(inboundChan, appCtx, appWg, readChan, sessionReady)
+	go writeSessionMessages(inboundChan, appCtx, appWg, readChan)
 	defer conn.Close()
 	defer appWg.Wait()
 	return nil
 
 }
 
-func loadHistory(historyChan chan *data.MessagePayload, readChan chan struct{}, ready chan struct{}) {
+func loadHistory(historyChan chan *data.MessagePayload, readChan chan struct{}) {
 	//loads messages created before the current sessions startedAt time
 	//should be remotely cancelled once the writeSessionMessages is called
-	var sentReady bool
+
 	var count int
-	for {
-		select {
-		case msg := <-historyChan:
-			printMessage(&msg.Message)
-			count += 1
-			if count >= msg.Count {
-				fmt.Println("history done..")
-				readChan <- struct{}{}
-				return
-			}
-		default:
-			if !sentReady {
-				ready <- struct{}{}
-				sentReady = true
-			}
+	for msg := range historyChan {
+		printMessage(&msg.Message)
+		count += 1
+		if count >= msg.Count {
+			fmt.Println("history done..")
+			readChan <- struct{}{}
+			return
 		}
 	}
 }
+
 func readInput(conn net.Conn, name string, readChan chan struct{}, appCancel context.CancelFunc) {
 	for {
 		fmt.Println("read chan blocked")
@@ -183,15 +173,10 @@ func handleConn(
 	connErrChan chan error,
 	inboundChan chan *data.MessagePayload,
 	historyChan chan *data.MessagePayload,
-	historyReady chan struct{},
-	sessionReady chan struct{},
 	appCtx context.Context,
 	appWg *sync.WaitGroup,
 	sessionStartTime time.Time) {
 	defer appWg.Done()
-
-	<-historyReady
-	<-sessionReady
 
 	for {
 		select {
@@ -227,11 +212,9 @@ func handleConn(
 func writeSessionMessages(inboundChan chan *data.MessagePayload,
 	appCtx context.Context, appWg *sync.WaitGroup,
 	readChan chan struct{},
-	sessionReady chan struct{},
 ) {
 	//cancel the history goroutine before starting current session
 	var count int
-	var sessionReadySent bool
 	defer appWg.Done()
 	for {
 		select {
@@ -242,11 +225,6 @@ func writeSessionMessages(inboundChan chan *data.MessagePayload,
 			printMessage(&msg.Message)
 			fmt.Println("[inbound] unblocking read...")
 			readChan <- struct{}{}
-		default:
-			if !sessionReadySent {
-				sessionReady <- struct{}{}
-				sessionReadySent = true
-			}
 		}
 	}
 
