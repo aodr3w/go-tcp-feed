@@ -10,7 +10,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/lib/pq"
-	_ "github.com/lib/pq"
 )
 
 var conn *sql.DB
@@ -122,7 +121,7 @@ func (dao Dao) GetUserByName(name string) (*User, error) {
 	return &user, nil
 }
 
-func (dao Dao) GetReceivedMessages(userID int, size int, offset int, minTime time.Time) ([]Message, error) {
+func (dao Dao) GetReceivedMessages(userID int, size int, offset int, minTime time.Time) ([]MessagePayload, error) {
 	//Get other messages other than current users messages
 	query := `
 	SELECT m.id, u.name, m.text, m.created_at
@@ -138,7 +137,7 @@ func (dao Dao) GetReceivedMessages(userID int, size int, offset int, minTime tim
 		return nil, fmt.Errorf("error retrieving messages for user %d: %w", userID, err)
 	}
 	defer rows.Close()
-	var messages []Message
+	var messages []MessagePayload
 
 	for rows.Next() {
 		var msg Message
@@ -146,7 +145,9 @@ func (dao Dao) GetReceivedMessages(userID int, size int, offset int, minTime tim
 			return nil, fmt.Errorf("error scanning message row: %w", err)
 		}
 		//get associated user name
-		messages = append(messages, msg)
+		messages = append(messages, MessagePayload{
+			Message: msg,
+		})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over messages: %w", err)

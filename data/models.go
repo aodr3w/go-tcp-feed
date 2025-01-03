@@ -49,28 +49,6 @@ type Message struct {
 	CreatedAt time.Time
 }
 
-func (m *Message) ToBytes() ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	err := encoder.Encode(m)
-	if err != nil {
-		return nil, fmt.Errorf("error encoding message: %w", err)
-	}
-	return buf.Bytes(), nil
-}
-
-// FromBytes converts a byte array to a Message struct using Gob.
-func FromBytes(data []byte) (*MessagePayload, error) {
-	var msg MessagePayload
-	buf := bytes.NewBuffer(data)
-	decoder := gob.NewDecoder(buf)
-	err := decoder.Decode(&msg)
-	if err != nil {
-		return nil, err
-	}
-	return &msg, nil
-}
-
 func (m Message) String() string {
 	return fmt.Sprintf(
 		"Message{ID: %d, userID: %d, Name: %q, Text: %q, CreatedAt: %s}",

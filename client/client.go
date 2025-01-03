@@ -136,12 +136,14 @@ func readInput(conn net.Conn, name string, readChan chan struct{}, appCancel con
 			break
 		}
 
-		msg := data.Message{
-			Name:      name,
-			Text:      txt,
-			CreatedAt: time.Now(),
+		payload := data.MessagePayload{
+			Message: data.Message{
+				Name:      name,
+				Text:      txt,
+				CreatedAt: time.Now(),
+			},
 		}
-		msgBytes, err := msg.ToBytes()
+		msgBytes, err := payload.ToBytes()
 		if err != nil {
 			fmt.Printf("%s", err.Error())
 		} else {
@@ -184,7 +186,7 @@ func readConn(
 				}
 				return
 			}
-			msg, err := data.FromBytes(buf[:n])
+			msg, err := data.PayloadFromBytes(buf[:n])
 			if err != nil {
 				//check if its count
 				fmt.Printf(">> serialization error: %s\n", err)

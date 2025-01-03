@@ -25,7 +25,7 @@ func NewBroadCast(dao *data.Dao) *Broadcast {
 }
 
 func (bc *Broadcast) Write(d []byte) error {
-	msg, err := data.FromBytes(d)
+	msg, err := data.PayloadFromBytes(d)
 	if err != nil {
 		return fmt.Errorf("error serializing message from bytes %w", err)
 	}

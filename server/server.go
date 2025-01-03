@@ -58,18 +58,6 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 		log.Printf("%v\n", err)
 		return
 	}
-	//message count
-	count, err := dao.GetMessageCount()
-	if err != nil {
-		log.Printf("%v\n", err)
-		return
-	}
-	_, err = conn.Write([]byte(fmt.Sprintf("msg-count:%d", count)))
-
-	if err != nil {
-		log.Printf("%v\n", err)
-		return
-	}
 	//check if name is already taken if so return an error
 	user, err := dao.GetUserByName(name)
 	if err != nil {
@@ -92,12 +80,14 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 		}
 	}
 
-	msg := data.Message{
-		Name:      "system",
-		Text:      fmt.Sprintf("userID-%s", user.Name),
-		CreatedAt: time.Now(),
+	payload := data.MessagePayload{
+		Message: data.Message{
+			Name:      "system",
+			Text:      fmt.Sprintf("userID-%s", user.Name),
+			CreatedAt: time.Now(),
+		},
 	}
-	b, err := msg.ToBytes()
+	b, err := payload.ToBytes()
 	if err != nil {
 		log.Println("error serializing message", err.Error())
 		return
