@@ -10,7 +10,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/aodr3w/go-chat/data"
@@ -59,6 +58,7 @@ func Start(serverPort int) error {
 	historyDone := make(chan struct{}, 1)
 	connDataChan := make(chan []byte)
 	connErrChan := make(chan error)
+	exitChan := make(chan struct{}, 1)
 
 	var name string
 
@@ -87,18 +87,16 @@ func Start(serverPort int) error {
 		return err
 	}
 
-	appWg := &sync.WaitGroup{}
 	appCtx, appCancel := context.WithCancel(context.Background())
 
 	go loadHistory(historyChan, historyDone)
-	go readInput(conn, name, readChan, appCancel)
-	appWg.Add(1)
-	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, appCtx, appWg, startedAt)
-	appWg.Add(1)
+	go readInput(conn, name, readChan, exitChan)
+	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, appCtx, startedAt)
 	go readConn(conn, connDataChan, connErrChan)
-	go writeSessionMessages(inboundChan, appCtx, appWg, readChan, historyDone)
-	defer conn.Close()
-	defer appWg.Wait()
+	go writeSessionMessages(inboundChan, appCtx, readChan, historyDone)
+	<-exitChan
+	appCancel()
+	conn.Close()
 	return nil
 
 }
@@ -113,23 +111,21 @@ func loadHistory(historyChan chan *data.MessagePayload, historyDone chan struct{
 		count += 1
 		if count >= msg.Count {
 			historyDone <- struct{}{}
+			log.Println("load history done.")
 			return
 		}
 	}
 }
 
-func readInput(conn net.Conn, name string, readChan chan struct{}, appCancel context.CancelFunc) {
-	for {
-		fmt.Println("blocking on readChan")
-		<-readChan
+func readInput(conn net.Conn, name string, readChan chan struct{}, exitChan chan struct{}) {
+	for range readChan {
 		txt := readMsg()
 		if len(txt) == 0 {
 			continue
 		}
 		if strings.EqualFold(txt, "q") {
-			fmt.Println("q entered sending cancel signal")
-			appCancel()
-			break
+			exitChan <- struct{}{}
+			return
 		}
 
 		payload := data.MessagePayload{
@@ -150,6 +146,7 @@ func readInput(conn net.Conn, name string, readChan chan struct{}, appCancel con
 		}
 		fmt.Println("message sent")
 	}
+
 }
 
 func readConn(conn net.Conn, dataChan chan<- []byte, errChan chan<- error) {
@@ -175,9 +172,7 @@ func handleConn(
 	inboundChan chan *data.MessagePayload,
 	historyChan chan *data.MessagePayload,
 	appCtx context.Context,
-	appWg *sync.WaitGroup,
 	sessionStartTime time.Time) {
-	defer appWg.Done()
 
 	for {
 		select {
@@ -211,14 +206,13 @@ func handleConn(
 	}
 }
 func writeSessionMessages(inboundChan chan *data.MessagePayload,
-	appCtx context.Context, appWg *sync.WaitGroup,
+	appCtx context.Context,
 	readChan chan struct{}, historyDone chan struct{},
 ) {
 	//cancel the history goroutine before starting current session
 	<-historyDone
 	var count int
 	ticker := time.NewTicker(500 * time.Millisecond)
-	defer appWg.Done()
 	defer ticker.Stop()
 	for {
 		select {
