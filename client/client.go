@@ -111,7 +111,6 @@ func loadHistory(historyChan chan *data.MessagePayload, readChan chan struct{}) 
 		printMessage(&msg.Message)
 		count += 1
 		if count >= msg.Count {
-			fmt.Println("history done..")
 			readChan <- struct{}{}
 			return
 		}
@@ -120,9 +119,7 @@ func loadHistory(historyChan chan *data.MessagePayload, readChan chan struct{}) 
 
 func readInput(conn net.Conn, name string, readChan chan struct{}, appCancel context.CancelFunc) {
 	for {
-		fmt.Println("read chan blocked")
 		<-readChan
-		fmt.Println("read chan unblocked")
 		txt := readMsg()
 		if len(txt) == 0 {
 			continue
@@ -223,7 +220,6 @@ func writeSessionMessages(inboundChan chan *data.MessagePayload,
 		case msg := <-inboundChan:
 			count += 1
 			printMessage(&msg.Message)
-			fmt.Println("[inbound] unblocking read...")
 			readChan <- struct{}{}
 		}
 	}
