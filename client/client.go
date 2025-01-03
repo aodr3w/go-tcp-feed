@@ -196,7 +196,6 @@ func handleConn(
 	for {
 		select {
 		case <-appCtx.Done():
-			log.Println("[client] stopping readConn function")
 			return
 		case connData, ok := <-connDataChan:
 			if !ok {
@@ -237,7 +236,6 @@ func writeSessionMessages(inboundChan chan *data.MessagePayload,
 	for {
 		select {
 		case <-appCtx.Done():
-			log.Println("[client] stopping writeSessionMessages")
 			return
 		case msg := <-inboundChan:
 			count += 1
