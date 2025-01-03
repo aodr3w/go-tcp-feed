@@ -59,6 +59,8 @@ func Start(serverPort int) error {
 
 	historyReady := make(chan struct{}, 1)
 	sessionReady := make(chan struct{}, 1)
+	connDataChan := make(chan []byte)
+	connErrChan := make(chan error)
 
 	var name string
 
@@ -93,8 +95,9 @@ func Start(serverPort int) error {
 	go loadHistory(historyChan, readChan, historyReady)
 	go readInput(conn, name, readChan, appCancel)
 	appWg.Add(1)
-	go readConn(conn, inboundChan, historyChan, historyReady, sessionReady, appCtx, appWg, startedAt)
+	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, historyReady, sessionReady, appCtx, appWg, startedAt)
 	appWg.Add(1)
+	go readConn(conn, connDataChan, connErrChan)
 	go writeSessionMessages(inboundChan, appCtx, appWg, readChan, sessionReady)
 	defer conn.Close()
 	defer appWg.Wait()
@@ -157,8 +160,27 @@ func readInput(conn net.Conn, name string, readChan chan struct{}, appCancel con
 		}
 	}
 }
-func readConn(
-	conn net.Conn,
+
+func readConn(conn net.Conn, dataChan chan<- []byte, errChan chan<- error) {
+	defer close(dataChan)
+	defer close(errChan)
+	buf := make([]byte, 1024)
+	for {
+		n, err := conn.Read(buf)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return
+			}
+			errChan <- err
+			return
+		}
+		dataChan <- buf[:n]
+	}
+
+}
+func handleConn(
+	connDataChan chan []byte,
+	connErrChan chan error,
 	inboundChan chan *data.MessagePayload,
 	historyChan chan *data.MessagePayload,
 	historyReady chan struct{},
@@ -176,26 +198,14 @@ func readConn(
 		case <-appCtx.Done():
 			log.Println("[client] stopping readConn function")
 			return
-		default:
-			buf := make([]byte, 1024)
-			n, err := conn.Read(buf)
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					continue
-				} else if opErr, ok := err.(*net.OpError); ok && strings.Contains(opErr.Err.Error(), "use of closed network connection") {
-					fmt.Print("")
-				} else {
-					log.Printf("error reading from conn: %s\n", err)
-				}
+		case connData, ok := <-connDataChan:
+			if !ok {
 				return
 			}
-			msg, err := data.PayloadFromBytes(buf[:n])
+			msg, err := data.PayloadFromBytes(connData)
 			if err != nil {
-				//check if its count
 				fmt.Printf(">> serialization error: %s\n", err)
 			} else {
-				//if the message is before session start time, its loading history
-				//otherwise its from the current chat session
 				if strings.Contains(msg.Message.Text, "system") {
 					printMessage(&msg.Message)
 				} else if sessionStartTime.After(msg.Message.CreatedAt) {
@@ -205,6 +215,12 @@ func readConn(
 				}
 
 			}
+		case err, ok := <-connErrChan:
+			if !ok {
+				return
+			}
+			log.Printf("Error reading from conn %v\n", err)
+			return
 		}
 
 	}
