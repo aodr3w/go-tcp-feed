@@ -113,6 +113,7 @@ func loadHistory(historyChan chan *data.MessagePayload, readChan chan struct{}, 
 			printMessage(&msg.Message)
 			count += 1
 			if count >= msg.Count {
+				fmt.Println("history done..")
 				readChan <- struct{}{}
 				return
 			}
@@ -126,7 +127,9 @@ func loadHistory(historyChan chan *data.MessagePayload, readChan chan struct{}, 
 }
 func readInput(conn net.Conn, name string, readChan chan struct{}, appCancel context.CancelFunc) {
 	for {
+		fmt.Println("read chan blocked")
 		<-readChan
+		fmt.Println("read chan unblocked")
 		txt := readMsg()
 		if len(txt) == 0 {
 			continue
@@ -193,7 +196,9 @@ func readConn(
 			} else {
 				//if the message is before session start time, its loading history
 				//otherwise its from the current chat session
-				if sessionStartTime.After(msg.Message.CreatedAt) {
+				if strings.Contains(msg.Message.Text, "system") {
+					printMessage(&msg.Message)
+				} else if sessionStartTime.After(msg.Message.CreatedAt) {
 					historyChan <- msg
 				} else {
 					inboundChan <- msg
@@ -221,6 +226,7 @@ func writeSessionMessages(inboundChan chan *data.MessagePayload,
 		case msg := <-inboundChan:
 			count += 1
 			printMessage(&msg.Message)
+			fmt.Println("[inbound] unblocking read...")
 			readChan <- struct{}{}
 		default:
 			if !sessionReadySent {
