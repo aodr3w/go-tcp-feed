@@ -17,6 +17,7 @@ start-db:
 
 stop-db:
 	docker stop go_chat_db && docker rm go_chat_db
+	@MAKE remove-volume
 
 remove-volume:
 	docker volume rm ${VOLUME_NAME}
