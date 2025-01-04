@@ -18,6 +18,12 @@ type MessagePayload struct {
 	Count int
 }
 
+func NewMessage(text string, name string) Message {
+	return Message{
+		Name: name,
+		Text: text,
+	}
+}
 func NewMessagePayload(m Message, count int) MessagePayload {
 	return MessagePayload{
 		Count:   count,

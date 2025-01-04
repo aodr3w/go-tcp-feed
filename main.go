@@ -23,7 +23,7 @@ func main() {
 	gob.Register(data.MessagePayload{})
 
 	svr := flag.Bool("server", false, "provide to start server")
-	clt := flag.Bool("client", false, "provide to start client")
+	clt := flag.Bool("publisher", false, "provide to start client side message publisher")
 	cstream := flag.Bool("client-stream", false, "provide to start message stream")
 	sstream := flag.Bool("server-stream", false, "start server side message stream on port 3000")
 
@@ -35,14 +35,17 @@ func main() {
 		server.Start(serverPort, b, &dao)
 		os.Exit(0)
 	}
+
 	if *clt {
-		client.Start(serverPort)
+		client.Publisher(serverPort)
 		os.Exit(0)
 	}
+
 	if *cstream {
 		client.StreamMessages(streamPort)
 		os.Exit(0)
 	}
+
 	if *sstream {
 		dao := data.NewDAO()
 		server.StreamMessages(streamPort, &dao)

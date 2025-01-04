@@ -23,14 +23,31 @@ open-db:
 	docker exec -it go_chat_db \
 	psql -U ${DB_USER} -d ${DB_NAME}
 
-
 db:
 	@MAKE stop-db
 	@MAKE remove-volume
 	@MAKE start-db
 
-front:
-	go run main.go --client
+# front:
+# 	go run main.go --client
 
-back:
+backend:
+	@MAKE serve
+	@MAKE sstream
+
+frontend:
+	@MAKE publisher
+	@MAKE cstream
+
+
+serve:
 	go run main.go --server
+
+sstream:
+	go run main.go --server-stream
+
+cstream:
+	go run main.go --client-stream
+
+publisher:
+	go run main.go --publisher

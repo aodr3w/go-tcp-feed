@@ -14,13 +14,9 @@ import (
 func printStreamMessage(msg *data.Message) {
 	txt := strings.TrimSpace(msg.Text)
 	name := strings.TrimSpace(msg.Name)
-	if name != userName {
-		fmt.Printf("%s >> %s\n", name, txt)
-	} else {
-		fmt.Printf("you << %s\n", txt)
-	}
-
+	fmt.Printf("%s >> %s\n", name, txt)
 }
+
 func handleError(err error) {
 	if err != nil {
 		log.Fatalf("[stream-error] %v", err)

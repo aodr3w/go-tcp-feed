@@ -1,5 +1,6 @@
-package client
+package bidi
 
+//bidirectional client side implemenation
 import (
 	"bufio"
 	"context"

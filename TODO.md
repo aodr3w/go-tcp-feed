@@ -2,6 +2,7 @@ add db agonostic database layer
 add authentication to access messages
 add k8s support
 add logging support
+add size limit for messages
 
 
 OPTIMIZATIONS
