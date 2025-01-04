@@ -12,6 +12,7 @@ import (
 )
 
 const serverPort = 2000
+const streamPort = 3000
 
 func main() {
 	err := data.InitDB()
@@ -23,6 +24,8 @@ func main() {
 
 	svr := flag.Bool("server", false, "provide to start server")
 	clt := flag.Bool("client", false, "provide to start client")
+	cstream := flag.Bool("client-stream", false, "provide to start message stream")
+	sstream := flag.Bool("server-stream", false, "start server side message stream on port 3000")
 
 	flag.Parse()
 
@@ -34,6 +37,15 @@ func main() {
 	}
 	if *clt {
 		client.Start(serverPort)
+		os.Exit(0)
+	}
+	if *cstream {
+		client.StreamMessages(streamPort)
+		os.Exit(0)
+	}
+	if *sstream {
+		dao := data.NewDAO()
+		server.StreamMessages(streamPort, &dao)
 		os.Exit(0)
 	}
 
