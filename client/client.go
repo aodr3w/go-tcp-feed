@@ -16,6 +16,11 @@ import (
 	"github.com/aodr3w/go-chat/data"
 )
 
+/*
+this file contains a client side implementation that can send and recieve messages in the same
+chat session, the downside is the message stream is not continuous. every time the client responds to
+a message they have press enter to receive more messages.
+*/
 var userName string
 
 func printMessage(msg *data.Message, mu *sync.Mutex) {
