@@ -60,8 +60,6 @@ func Start(serverPort int) error {
 	startedAt := time.Now()
 	//channel for messages from current session
 	inboundChan := make(chan *data.MessagePayload, 100)
-	//channel to signal a message can be read from the input
-	readChan := make(chan struct{}, 1)
 	//channel for messages before current session
 	historyChan := make(chan *data.MessagePayload, 100)
 	historyDone := make(chan struct{}, 1)
@@ -97,10 +95,10 @@ func Start(serverPort int) error {
 	appCtx, appCancel := context.WithCancel(context.Background())
 
 	go loadHistory(historyChan, historyDone)
-	go readInput(conn, userName, readChan, exitChan)
+	go readInput(conn, userName, exitChan)
 	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, historyDone, appCtx, startedAt)
 	go readConn(conn, connDataChan, connErrChan)
-	go writeSessionMessages(inboundChan, appCtx, readChan, historyDone)
+	go writeSessionMessages(inboundChan, historyDone)
 	<-exitChan
 	appCancel()
 	conn.Close()
@@ -123,8 +121,9 @@ func loadHistory(historyChan chan *data.MessagePayload, historyDone chan struct{
 	}
 }
 
-func readInput(conn net.Conn, name string, readChan chan struct{}, exitChan chan struct{}) {
-	for range readChan {
+func readInput(conn net.Conn, name string, exitChan chan struct{}) {
+	for {
+		time.Sleep(500 * time.Millisecond)
 		txt := readMsg()
 		if len(txt) == 0 {
 			continue
@@ -217,25 +216,10 @@ func handleConn(
 	}
 }
 func writeSessionMessages(inboundChan chan *data.MessagePayload,
-	appCtx context.Context,
-	readChan chan struct{}, historyDone chan struct{},
+	historyDone chan struct{},
 ) {
-	//cancel the history goroutine before starting current session
 	<-historyDone
-	var count int
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-appCtx.Done():
-			return
-		case msg := <-inboundChan:
-			count += 1
-			printMessage(&msg.Message)
-			readChan <- struct{}{}
-		case <-ticker.C:
-			readChan <- struct{}{}
-		}
+	for msg := range inboundChan {
+		printMessage(&msg.Message)
 	}
-
 }
