@@ -18,6 +18,13 @@ type MessagePayload struct {
 	Count int
 }
 
+func NewMessagePayload(m Message, count int) MessagePayload {
+	return MessagePayload{
+		Count:   count,
+		Message: m,
+	}
+}
+
 func (m *MessagePayload) ToBytes() ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := gob.NewEncoder(&buf)

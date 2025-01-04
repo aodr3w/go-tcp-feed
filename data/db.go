@@ -198,3 +198,33 @@ func (dao Dao) GetMessages(size int, offset int, mo MessageOrder, maxTime time.T
 	}
 	return messages, nil
 }
+
+func (dao Dao) GetMessageStream(size int, offset int, mo MessageOrder) ([]Message, error) {
+
+	query := fmt.Sprintf(
+		`
+		SELECT m.id, u.name, m.text, m.created_at FROM
+		messages m JOIN users u on m.user_id = u.id
+		ORDER BY m.created_at %s LIMIT $1 OFFSET $2
+		`, mo)
+	rows, err := dao.Query(query, size, offset)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving messages %w", err)
+	}
+
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		var msg Message
+		if err := rows.Scan(&msg.ID, &msg.Name, &msg.Text, &msg.CreatedAt); err != nil {
+			return nil, fmt.Errorf("error retrieving message row %w", err)
+		}
+		messages = append(messages, msg)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over messages: %w", err)
+	}
+	return messages, nil
+}
