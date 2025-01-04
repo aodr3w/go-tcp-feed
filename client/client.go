@@ -18,14 +18,14 @@ import (
 var userName string
 
 func printMessage(msg *data.Message) {
-	var pref string
-	if msg.Name == userName {
-		pref = "<<"
+	txt := strings.TrimSpace(msg.Text)
+	name := strings.TrimSpace(msg.Name)
+	if name != userName {
+		fmt.Printf("%s >> %s\n", name, txt)
 	} else {
-		pref = ">>"
+		fmt.Printf("you << %s\n", txt)
 	}
-	formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
-	fmt.Printf("%s %s [ %s - %s ]\n", pref, msg.Text, msg.Name, formattedTime)
+
 }
 func readStdIn() (string, error) {
 	reader := bufio.NewReader(os.Stdin)
@@ -35,6 +35,7 @@ func readStdIn() (string, error) {
 	}
 	return txt, nil
 }
+
 func readName() string {
 	fmt.Print("name: ")
 	name, err := readStdIn()
@@ -42,11 +43,11 @@ func readName() string {
 		log.Println(err)
 		return ""
 	}
-	return name
+	return strings.TrimSpace(name) // trim newline and spaces
 }
 
 func readMsg() string {
-	fmt.Print("<< ")
+	fmt.Print("you << ")
 	msg, err := readStdIn()
 	if err != nil {
 		log.Printf("error reading input: %v", err)
@@ -117,7 +118,6 @@ func loadHistory(historyChan chan *data.MessagePayload, historyDone chan struct{
 		count += 1
 		if count >= msg.Count {
 			historyDone <- struct{}{}
-			log.Println("load history done.")
 			return
 		}
 	}
