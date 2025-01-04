@@ -3,9 +3,6 @@ include .env
 
 VOLUME_NAME=my_postgres_data
 
-build:
-	go build -o app main.go
-
 start-db:
 	docker run -d --name go_chat_db \
 	-e POSTGRES_PASSWORD=${PG_PASS} \
