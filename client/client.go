@@ -91,7 +91,7 @@ func Start(serverPort int) error {
 
 	go loadHistory(historyChan, historyDone)
 	go readInput(conn, name, readChan, exitChan)
-	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, appCtx, startedAt)
+	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, historyDone, appCtx, startedAt)
 	go readConn(conn, connDataChan, connErrChan)
 	go writeSessionMessages(inboundChan, appCtx, readChan, historyDone)
 	<-exitChan
@@ -144,7 +144,6 @@ func readInput(conn net.Conn, name string, readChan chan struct{}, exitChan chan
 				log.Fatal(err)
 			}
 		}
-		fmt.Println("message sent")
 	}
 
 }
@@ -171,6 +170,7 @@ func handleConn(
 	connErrChan chan error,
 	inboundChan chan *data.MessagePayload,
 	historyChan chan *data.MessagePayload,
+	historyDone chan struct{},
 	appCtx context.Context,
 	sessionStartTime time.Time) {
 
@@ -186,9 +186,14 @@ func handleConn(
 			if err != nil {
 				fmt.Printf(">> serialization error: %s\n", err)
 			} else {
-				if strings.Contains(msg.Message.Text, "system") {
+				if strings.Contains(msg.Text, "userID-") {
+					if msg.Count == 0 {
+						close(historyChan)
+						historyDone <- struct{}{}
+					}
+				} else if strings.Contains(msg.Text, "system") {
 					printMessage(&msg.Message)
-				} else if sessionStartTime.After(msg.Message.CreatedAt) {
+				} else if sessionStartTime.After(msg.CreatedAt) {
 					historyChan <- msg
 				} else {
 					inboundChan <- msg

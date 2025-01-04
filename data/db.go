@@ -101,7 +101,7 @@ func (dao Dao) CreateUser(name string) (*User, error) {
 
 func (dao Dao) GetMessageCount() (int, error) {
 	var count int
-	query := `SELECT COUNT(*) FROM messages`
+	query := `SELECT COUNT(1) FROM messages`
 	err := dao.QueryRow(query).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("error retrieving message count: %w", err)

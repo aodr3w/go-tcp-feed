@@ -30,13 +30,13 @@ func (bc *Broadcast) Write(d []byte) error {
 		return fmt.Errorf("error serializing message from bytes %w", err)
 	}
 
-	sender, err := bc.dao.GetUserByName(msg.Message.Name)
+	sender, err := bc.dao.GetUserByName(msg.Name)
 
 	if err != nil {
 		return fmt.Errorf("error getting user associated with message %w", err)
 	}
 
-	return bc.dao.InsertUserMessage(sender.ID, msg.Message.Text)
+	return bc.dao.InsertUserMessage(sender.ID, msg.Text)
 }
 
 func (bc *Broadcast) LoadMessages(offset int, size int, maxTime time.Time) ([]data.MessagePayload, error) {

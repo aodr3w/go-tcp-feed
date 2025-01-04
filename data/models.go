@@ -14,8 +14,8 @@ type User struct {
 }
 
 type MessagePayload struct {
-	Message Message
-	Count   int
+	Message
+	Count int
 }
 
 func (m *MessagePayload) ToBytes() ([]byte, error) {
@@ -49,9 +49,9 @@ type Message struct {
 	CreatedAt time.Time
 }
 
-func (m Message) String() string {
+func (m MessagePayload) String() string {
 	return fmt.Sprintf(
-		"Message{ID: %d, userID: %d, Name: %q, Text: %q, CreatedAt: %s}",
-		m.ID, m.userID, m.Name, m.Text, m.CreatedAt.Format(time.RFC3339),
+		"Message{ID: %d, userID: %d, Name: %q, Text: %q, CreatedAt: %s} count: %d",
+		m.ID, m.userID, m.Name, m.Text, m.CreatedAt.Format(time.RFC3339), m.Count,
 	)
 }

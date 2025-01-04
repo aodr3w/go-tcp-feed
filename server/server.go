@@ -80,7 +80,13 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 		}
 	}
 
+	msgCount, err := dao.GetMessageCount()
+	if err != nil {
+		log.Println("error getting message count", err.Error())
+		return
+	}
 	payload := data.MessagePayload{
+		Count: msgCount,
 		Message: data.Message{
 			Name:      "system",
 			Text:      fmt.Sprintf("userID-%s", user.Name),
