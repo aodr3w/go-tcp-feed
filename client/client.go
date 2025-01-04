@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aodr3w/go-chat/data"
@@ -17,7 +18,9 @@ import (
 
 var userName string
 
-func printMessage(msg *data.Message) {
+func printMessage(msg *data.Message, mu *sync.Mutex) {
+	mu.Lock()
+	defer mu.Unlock()
 	txt := strings.TrimSpace(msg.Text)
 	name := strings.TrimSpace(msg.Name)
 	if name != userName {
@@ -46,8 +49,10 @@ func readName() string {
 	return strings.TrimSpace(name) // trim newline and spaces
 }
 
-func readMsg() string {
+func readMsg(mu *sync.Mutex) string {
 	fmt.Print("you << ")
+	mu.Lock()
+	defer mu.Unlock()
 	msg, err := readStdIn()
 	if err != nil {
 		log.Printf("error reading input: %v", err)
@@ -66,6 +71,7 @@ func Start(serverPort int) error {
 	connDataChan := make(chan []byte)
 	connErrChan := make(chan error)
 	exitChan := make(chan struct{}, 1)
+	mu := sync.Mutex{}
 
 	fmt.Println("TIP: ENTER Q to quit")
 
@@ -94,11 +100,11 @@ func Start(serverPort int) error {
 
 	appCtx, appCancel := context.WithCancel(context.Background())
 
-	go loadHistory(historyChan, historyDone)
-	go readInput(conn, userName, exitChan)
-	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, historyDone, appCtx, startedAt)
+	go loadHistory(historyChan, historyDone, &mu)
+	go readInput(conn, userName, exitChan, &mu)
+	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, historyDone, appCtx, startedAt, &mu)
 	go readConn(conn, connDataChan, connErrChan)
-	go writeSessionMessages(inboundChan, historyDone)
+	go writeSessionMessages(inboundChan, historyDone, &mu)
 	<-exitChan
 	appCancel()
 	conn.Close()
@@ -106,13 +112,13 @@ func Start(serverPort int) error {
 
 }
 
-func loadHistory(historyChan chan *data.MessagePayload, historyDone chan struct{}) {
+func loadHistory(historyChan chan *data.MessagePayload, historyDone chan struct{}, mu *sync.Mutex) {
 	//loads messages created before the current sessions startedAt time
 	//should be remotely cancelled once the writeSessionMessages is called
 
 	var count int
 	for msg := range historyChan {
-		printMessage(&msg.Message)
+		printMessage(&msg.Message, mu)
 		count += 1
 		if count >= msg.Count {
 			historyDone <- struct{}{}
@@ -121,10 +127,10 @@ func loadHistory(historyChan chan *data.MessagePayload, historyDone chan struct{
 	}
 }
 
-func readInput(conn net.Conn, name string, exitChan chan struct{}) {
+func readInput(conn net.Conn, name string, exitChan chan struct{}, mu *sync.Mutex) {
 	for {
-		time.Sleep(500 * time.Millisecond)
-		txt := readMsg()
+		time.Sleep(1000 * time.Millisecond)
+		txt := readMsg(mu)
 		if len(txt) == 0 {
 			continue
 		}
@@ -177,7 +183,9 @@ func handleConn(
 	historyChan chan *data.MessagePayload,
 	historyDone chan struct{},
 	appCtx context.Context,
-	sessionStartTime time.Time) {
+	sessionStartTime time.Time,
+	mu *sync.Mutex,
+) {
 
 	for {
 		select {
@@ -197,7 +205,7 @@ func handleConn(
 						historyDone <- struct{}{}
 					}
 				} else if strings.Contains(msg.Text, "system") {
-					printMessage(&msg.Message)
+					printMessage(&msg.Message, mu)
 				} else if sessionStartTime.After(msg.CreatedAt) {
 					historyChan <- msg
 				} else {
@@ -216,10 +224,12 @@ func handleConn(
 	}
 }
 func writeSessionMessages(inboundChan chan *data.MessagePayload,
-	historyDone chan struct{},
+	historyDone chan struct{}, mu *sync.Mutex,
 ) {
 	<-historyDone
 	for msg := range inboundChan {
-		printMessage(&msg.Message)
+		printMessage(&msg.Message, mu)
+		//a channel to trigger a read may be useful here
+		//maybe after a short period of no new messages
 	}
 }
