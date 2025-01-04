@@ -15,9 +15,17 @@ import (
 	"github.com/aodr3w/go-chat/data"
 )
 
+var userName string
+
 func printMessage(msg *data.Message) {
+	var pref string
+	if msg.Name == userName {
+		pref = "<<"
+	} else {
+		pref = ">>"
+	}
 	formattedTime := msg.CreatedAt.Format("1/2/2006 15:04:05")
-	fmt.Printf(">> %s [ %s - %s ]\n", msg.Text, msg.Name, formattedTime)
+	fmt.Printf("%s %s [ %s - %s ]\n", pref, msg.Text, msg.Name, formattedTime)
 }
 func readStdIn() (string, error) {
 	reader := bufio.NewReader(os.Stdin)
@@ -38,7 +46,7 @@ func readName() string {
 }
 
 func readMsg() string {
-	fmt.Print(">>")
+	fmt.Print("<< ")
 	msg, err := readStdIn()
 	if err != nil {
 		log.Printf("error reading input: %v", err)
@@ -60,13 +68,11 @@ func Start(serverPort int) error {
 	connErrChan := make(chan error)
 	exitChan := make(chan struct{}, 1)
 
-	var name string
-
 	fmt.Println("TIP: ENTER Q to quit")
 
 	for {
-		name = readName()
-		if len(name) <= 3 {
+		userName = readName()
+		if len(userName) <= 3 {
 			fmt.Println("name should be atleast 3 characters")
 			continue
 		}
@@ -81,7 +87,7 @@ func Start(serverPort int) error {
 	}
 
 	//send the user's name to the server
-	_, err = conn.Write([]byte(fmt.Sprintf("name-%s", name)))
+	_, err = conn.Write([]byte(fmt.Sprintf("name-%s", userName)))
 
 	if err != nil {
 		return err
@@ -90,7 +96,7 @@ func Start(serverPort int) error {
 	appCtx, appCancel := context.WithCancel(context.Background())
 
 	go loadHistory(historyChan, historyDone)
-	go readInput(conn, name, readChan, exitChan)
+	go readInput(conn, userName, readChan, exitChan)
 	go handleConn(connDataChan, connErrChan, inboundChan, historyChan, historyDone, appCtx, startedAt)
 	go readConn(conn, connDataChan, connErrChan)
 	go writeSessionMessages(inboundChan, appCtx, readChan, historyDone)
