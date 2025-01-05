@@ -31,7 +31,7 @@ func main() {
 
 	if *svr {
 		dao := data.NewDAO()
-		b := server.NewBroadCast(&dao)
+		b := server.NewService(&dao)
 		server.Start(serverPort, b, &dao)
 		os.Exit(0)
 	}

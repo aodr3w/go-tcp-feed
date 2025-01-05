@@ -43,7 +43,7 @@ func writeConn(conn net.Conn, data []byte) {
 	}
 }
 
-func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
+func handleConnection(conn net.Conn, service *Service, dao *data.Dao) {
 	defer conn.Close()
 	initial, err := readConn(conn)
 
@@ -102,7 +102,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 
 	ct := time.Now()
 	//load messages first
-	payloads, err := broadcast.LoadMessages(0, 100, ct)
+	payloads, err := service.LoadMessages(0, 100, ct)
 	if err != nil {
 		conn.Write([]byte(fmt.Sprintf("error loading messages %s\n", err.Error())))
 		return
@@ -152,7 +152,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 			log.Printf("%v\n", err)
 			return
 		}
-		err = broadcast.Write(recv)
+		err = service.Write(recv)
 		if err != nil {
 			writeConn(conn, []byte(err.Error()))
 			return
@@ -160,7 +160,7 @@ func handleConnection(conn net.Conn, broadcast *Broadcast, dao *data.Dao) {
 	}
 }
 
-func Start(SERVER_PORT int, broadcast *Broadcast, dao *data.Dao) error {
+func Start(SERVER_PORT int, s *Service, dao *data.Dao) error {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", SERVER_PORT))
 	if err != nil {
 		return err
@@ -176,6 +176,6 @@ func Start(SERVER_PORT int, broadcast *Broadcast, dao *data.Dao) error {
 			}
 			return err
 		}
-		go handleConnection(conn, broadcast, dao)
+		go handleConnection(conn, s, dao)
 	}
 }

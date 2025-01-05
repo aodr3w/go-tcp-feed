@@ -8,15 +8,15 @@ import (
 	"github.com/aodr3w/go-chat/data"
 )
 
-type Broadcast struct {
+type Service struct {
 	m       *sync.RWMutex
 	data    [][]byte
 	readIdx map[string]int
 	dao     *data.Dao
 }
 
-func NewBroadCast(dao *data.Dao) *Broadcast {
-	return &Broadcast{
+func NewService(dao *data.Dao) *Service {
+	return &Service{
 		m:       &sync.RWMutex{},
 		data:    make([][]byte, 0),
 		readIdx: make(map[string]int),
@@ -24,7 +24,7 @@ func NewBroadCast(dao *data.Dao) *Broadcast {
 	}
 }
 
-func (bc *Broadcast) Write(d []byte) error {
+func (bc *Service) Write(d []byte) error {
 	msg, err := data.PayloadFromBytes(d)
 	if err != nil {
 		return fmt.Errorf("error serializing message from bytes %w", err)
@@ -39,7 +39,7 @@ func (bc *Broadcast) Write(d []byte) error {
 	return bc.dao.InsertUserMessage(sender.ID, msg.Text)
 }
 
-func (bc *Broadcast) LoadMessages(offset int, size int, maxTime time.Time) ([]data.MessagePayload, error) {
+func (bc *Service) LoadMessages(offset int, size int, maxTime time.Time) ([]data.MessagePayload, error) {
 	count, err := bc.dao.GetMessageCount()
 
 	if err != nil {
@@ -62,7 +62,7 @@ func (bc *Broadcast) LoadMessages(offset int, size int, maxTime time.Time) ([]da
 	return messagePayLoads, nil
 }
 
-func (bc *Broadcast) Read(name string) []byte {
+func (bc *Service) Read(name string) []byte {
 	bc.m.RLock()
 	idx := bc.readIdx[name]
 	defer bc.m.RUnlock()
