@@ -9,7 +9,7 @@ import (
 	"github.com/aodr3w/go-chat/data"
 )
 
-func StreamMessages(port int, dao *data.Dao) {
+func ReadMessages(port int, s *Service) {
 	//read messages from the database in a stream starting from oldest to curent
 	//do so continuously using an offset
 	//get connection first
@@ -29,7 +29,7 @@ func StreamMessages(port int, dao *data.Dao) {
 			size := 100
 			offset := 0
 			for {
-				messages, err := dao.GetMessageStream(size, offset, data.Oldest)
+				messages, err := s.GetMessageStream(size, offset, data.Oldest)
 				if err != nil {
 					log.Println("[stream-error] ", err)
 					return
