@@ -18,6 +18,7 @@ func ReadMessages(port int, s *Service) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("[readMessages] server is accepting connections on %d\n", port)
 	for {
 		conn, err := listener.Accept()
 		log.Println("connection received", conn.LocalAddr())

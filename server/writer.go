@@ -20,7 +20,7 @@ func WriteMessages(SERVER_PORT int, s *Service) error {
 		return err
 	}
 	defer ln.Close()
-	log.Printf("server is accepting connections on %d\n", SERVER_PORT)
+	log.Printf("[writeMessages] server is accepting connections on %d\n", SERVER_PORT)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
