@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strings"
 	"time"
@@ -12,23 +11,43 @@ import (
 	"github.com/aodr3w/go-chat/data"
 )
 
-//handles incoming messages
+var (
+	logger = NewLogger("[writeMessages] ")
+)
 
-func WriteMessages(SERVER_PORT int, s *Service) error {
+/*
+/*
+handleConnection manages an individual client connection.
+It performs the following steps:
+1. Reads the initial handshake data from the client.
+2. Extracts the client's name or assigns a default identifier if the name is missing.
+3. Ensures the client's name is unique or creates a new user in the database.
+4. Sends an initial system message to the client.
+5. Continuously reads messages from the client and writes them to the database.
+
+Parameters:
+- conn: The active TCP connection with the client.
+- service: The Service layer for interacting with the database.
+
+The connection is closed upon completion or in case of an error.
+*/
+func WriteMessages(SERVER_PORT int, s *Service) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", SERVER_PORT))
 	if err != nil {
-		return err
+		logger.Printf("error creating listener: %v\n", err)
+		return
 	}
 	defer ln.Close()
-	log.Printf("[writeMessages] server is accepting connections on %d\n", SERVER_PORT)
+	logger.Printf("server is accepting connections on %d\n", SERVER_PORT)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
-				log.Println("connection closed")
+				logger.Println("connection closed")
 				continue
 			}
-			return err
+			logger.Printf("error accepting new connection %v", err)
+			return
 		}
 		go handleConnection(conn, s)
 	}
@@ -49,9 +68,9 @@ func readConn(conn net.Conn) (data []byte, err error) {
 	n, err := conn.Read(buf)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			log.Println("client disconnected")
+			logger.Println("client disconnected")
 		} else {
-			log.Printf("error reading from conn: %s\n", err)
+			logger.Printf("error reading from conn: %s\n", err)
 		}
 		return
 	}
@@ -61,23 +80,27 @@ func readConn(conn net.Conn) (data []byte, err error) {
 func writeConn(conn net.Conn, data []byte) {
 	_, err := conn.Write(data)
 	if err != nil {
-		log.Printf("[writeConnError] %v\n", err)
+		logger.Printf("%v\n", err)
 	}
 }
 
+/*
+handleConnection handles the handshake step with clients
+and writes messages to the database
+*/
 func handleConnection(conn net.Conn, service *Service) {
 	defer conn.Close()
 	initial, err := readConn(conn)
 
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Printf("%v\n", err)
 		return
 	}
 
 	name, err := extractName(conn, initial)
 
 	if err != nil {
-		log.Printf("%v\n", err)
+		logger.Printf("%v\n", err)
 		return
 	}
 	//check if name is already taken if so return an error
@@ -94,9 +117,9 @@ func handleConnection(conn net.Conn, service *Service) {
 				writeConn(conn, []byte("[Internal Server Error] invalid user data"))
 				return
 			}
-			log.Printf("user successfully created: %v", user)
+			logger.Printf("user successfully created: %v", user)
 		} else {
-			log.Printf("unknown error type: %v", err)
+			logger.Printf("unknown error type: %v", err)
 			writeConn(conn, []byte(err.Error()))
 			return
 		}
@@ -104,7 +127,7 @@ func handleConnection(conn net.Conn, service *Service) {
 
 	msgCount, err := service.GetMessageCount()
 	if err != nil {
-		log.Println("error getting message count", err.Error())
+		logger.Println("error getting message count", err.Error())
 		return
 	}
 	payload := data.MessagePayload{
@@ -117,14 +140,14 @@ func handleConnection(conn net.Conn, service *Service) {
 	}
 	b, err := payload.ToBytes()
 	if err != nil {
-		log.Println("error serializing message", err.Error())
+		logger.Println("error serializing message", err.Error())
 		return
 	}
 
 	_, err = conn.Write(b)
 
 	if err != nil {
-		log.Printf("error writing system message: %v\n", err)
+		logger.Printf("error writing system message: %v\n", err)
 	}
 
 	//continuosly write new messages from the connection to
@@ -132,7 +155,7 @@ func handleConnection(conn net.Conn, service *Service) {
 		//handles reading messages from connection and writing them to the database via service Layer.
 		recv, err := readConn(conn)
 		if err != nil {
-			log.Printf("%v\n", err)
+			logger.Printf("%v\n", err)
 			return
 		}
 		err = service.Write(recv)

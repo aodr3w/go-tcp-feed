@@ -10,7 +10,21 @@ import (
 )
 
 /*
-ReadMessages reads messages from the database continuously using an offset in ascending order
+/*
+ReadMessages starts a TCP server on the specified port to stream messages to connected clients.
+
+This function:
+- Listens for incoming TCP connections on the specified port.
+- For each new connection, starts a goroutine to stream messages to the client.
+- Reads messages from the database using a pagination-like approach (with `size` and `offset`).
+- Serializes each message into bytes and sends it over the TCP connection.
+- Handles errors gracefully, including issues with database access, message serialization, or client disconnection.
+
+Parameters:
+- port: The port number on which the server listens for incoming TCP connections.
+- s: A pointer to the Service layer, which provides methods to fetch and process messages from the database.
+
+Errors are logged using a logger with the prefix `[readMessages]`. Each client connection runs in its own goroutine, and the server continues to accept new connections until an error occurs or the server is stopped.
 */
 func ReadMessages(port int, s *Service) {
 

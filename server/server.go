@@ -1,12 +1,20 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"sync"
 )
 
+func NewLogger(prefix string) *log.Logger {
+	return log.New(
+		log.Writer(),
+		fmt.Sprintf("[%s] ", prefix),
+		log.LstdFlags,
+	)
+}
+
 func Start(writePort int, readPort int) {
-	log.Println("starting server...")
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
