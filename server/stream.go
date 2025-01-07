@@ -9,42 +9,51 @@ import (
 	"github.com/aodr3w/go-chat/data"
 )
 
+/*
+ReadMessages reads messages from the database continuously using an offset in ascending order
+*/
 func ReadMessages(port int, s *Service) {
-	//read messages from the database in a stream starting from oldest to curent
-	//do so continuously using an offset
-	//get connection first
+
+	logger := log.New(log.Writer(), "[readMessages] ", log.LstdFlags)
+
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 
 	if err != nil {
-		log.Fatal(err)
+		logger.Printf("error creating tcp listener: %v\n", err)
+		return
 	}
-	log.Printf("[readMessages] server is accepting connections on %d\n", port)
+
+	logger.Printf("server is accepting connections on %d\n", port)
+
 	for {
 		conn, err := listener.Accept()
-		log.Println("connection received", conn.LocalAddr())
 		if err != nil {
-			log.Fatal(err)
+			logger.Printf("error accepting connection %v\n", err)
+			return
 		}
 
+		logger.Println("new connection received")
+
 		go func(conn net.Conn) {
+			defer conn.Close()
 			size := 100
 			offset := 0
 			for {
 				messages, err := s.GetMessageStream(size, offset, data.Oldest)
 				if err != nil {
-					log.Println("[stream-error] ", err)
+					logger.Printf("[stream-error] %v\n", err)
 					return
 				}
 				for _, message := range messages {
 					mp := data.NewMessagePayload(message, 0)
 					mpb, err := mp.ToBytes()
 					if err != nil {
-						log.Println("failed to serialize message due to error: ", err)
+						logger.Printf("failed to serialize message due to error: %v\n", err)
 						return
 					}
 					_, err = conn.Write(mpb)
 					if err != nil {
-						log.Printf("[stream error] %v\n", err)
+						logger.Printf("[stream error] %v\n", err)
 						return
 					}
 					time.Sleep(50 * time.Microsecond)
