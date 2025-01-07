@@ -5,9 +5,9 @@ SHELL := /bin/bash
 
 # 1. Default variables (in case they're not set in the .env file)
 VOLUME_NAME ?= my_postgres_data
-PG_PASS ?= mysecretpassword
+PG_PASS ?= postgres
 DB_USER ?= postgres
-DB_NAME ?= postgres
+DB_NAME ?= go_chat_db
 
 # 2. OS check (Darwin is macOS)
 OS := $(shell uname -s)
@@ -99,11 +99,10 @@ publisher:
 	"
 
 # 13. Frontend - starts both publisher and client stream.
+# 13. Frontend - starts both publisher and client stream in separate tmux sessions
 frontend:
-	tmux new-session -d -s frontend "\
-		make publisher && \
-		make cstream \
-	"
+	@make publisher
+	@make cstream
 
 # 14. Combined 'status' to list tmux sessions
 status:
