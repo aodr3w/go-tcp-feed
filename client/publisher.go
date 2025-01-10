@@ -14,7 +14,7 @@ import (
 var userName string
 
 func getInput() string {
-	fmt.Print(">> ")
+	fmt.Print("<< ")
 	reader := bufio.NewReader(os.Stdin)
 	name, err := reader.ReadString('\n')
 	if err != nil {
