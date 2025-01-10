@@ -45,13 +45,12 @@ Quick Start
 
 ```
 % make app
-
 ```
 
-•	Installs missing dependencies on macOS (like tmux).
-•	Checks/starts Docker.
-•	Launches a PostgreSQL container for storing messages.
-•	Spins up server, feed, and publisher in separate tmux sessions.
+- Installs missing dependencies on macOS (like tmux).
+- Checks/starts Docker.
+- Launches a PostgreSQL container for storing messages.
+- Spins up server, feed, and publisher in separate tmux sessions.
 
 4.	View Running Sessions
 
