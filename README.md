@@ -28,27 +28,27 @@ Requirements
 
 
 Quick Start
-	1.	Clone the Repository
 
-    ```
-    git clone https://github.com/aodr3w/go-tcp-feed.git
-    cd go-tcp-feed
-    ```
+1.	Clone the Repository
 
 
-	2.	Set Up Environment Variables (Optional)
+git clone https://github.com/aodr3w/go-tcp-feed.git
+cd go-tcp-feed
+
+
+2.	Set Up Environment Variables (Optional)
+
 If you have a .env file, environment variables (e.g., PG_PASS, DB_USER, DB_NAME) will be automatically loaded by the Makefile.
-	3.	Build and Start the Application
+
+3.	Build and Start the Application
 
 make app
+•	Installs missing dependencies on macOS (like tmux).
+•	Checks/starts Docker.
+•	Launches a PostgreSQL container for storing messages.
+•	Spins up server, feed, and publisher in separate tmux sessions.
 
-	•	Installs missing dependencies on macOS (like tmux).
-	•	Checks/starts Docker.
-	•	Launches a PostgreSQL container for storing messages.
-	•	Spins up server, feed, and publisher in separate tmux sessions.
-
-	4.	View Running Sessions
-
+4.	View Running Sessions
 ```
 tmux ls
 ```
