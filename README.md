@@ -111,7 +111,7 @@ This terminates the PostgreSQL container and kills any related tmux sessions.
 
 Inspired By
 
-	•	https://codingchallenges.fyi/challenges/challenge-realtime-chat
+•	https://codingchallenges.fyi/challenges/challenge-realtime-chat
 
 Enjoy real-time publishing and subscribing with Go TCP Feed!
 Feel free to open an issue or submit a PR if you have any questions or improvements.
