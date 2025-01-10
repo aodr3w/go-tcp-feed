@@ -20,8 +20,9 @@ type MessagePayload struct {
 
 func NewMessage(text string, name string) Message {
 	return Message{
-		Name: name,
-		Text: text,
+		Name:      name,
+		Text:      text,
+		CreatedAt: time.Now(),
 	}
 }
 func NewMessagePayload(m Message, count int) MessagePayload {

@@ -30,7 +30,7 @@ func (s *Service) Write(d []byte) error {
 		return fmt.Errorf("error getting user associated with message %w", err)
 	}
 
-	return s.InsertUserMessage(sender.ID, msg.Text)
+	return s.InsertUserMessage(sender.ID, msg.Text, msg.CreatedAt)
 }
 
 func (s *Service) LoadMessages(offset int, size int, maxTime time.Time) ([]data.MessagePayload, error) {

@@ -155,12 +155,13 @@ func (dao Dao) GetReceivedMessages(userID int, size int, offset int, minTime tim
 	return messages, nil
 }
 
-func (dao Dao) InsertUserMessage(userID int, message string) error {
+func (dao Dao) InsertUserMessage(userID int, message string, createdAt time.Time) error {
+	log.Println("inserting with time: ", createdAt)
 	query := `
 	INSERT INTO messages (user_id, text, created_at)
-	VALUES ($1, $2, NOW())
+	VALUES ($1, $2, $3)
 	`
-	_, err := dao.Exec(query, userID, message)
+	_, err := dao.Exec(query, userID, message, createdAt)
 
 	if err != nil {
 		return fmt.Errorf("error inserting message for user ID %d: %w", userID, err)
