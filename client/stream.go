@@ -14,7 +14,9 @@ import (
 func printStreamMessage(msg *data.Message) {
 	txt := strings.TrimSpace(msg.Text)
 	name := strings.TrimSpace(msg.Name)
-	fmt.Printf("%s >> %s\n", name, txt)
+	formattedTime := strings.TrimSpace(msg.CreatedAt.Format("1/2/2006 15:04:05"))
+	out := strings.TrimSpace(fmt.Sprintf("%s >> %s [%s]", name, txt, formattedTime))
+	fmt.Println(out)
 }
 
 func handleError(err error) {
