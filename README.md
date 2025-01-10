@@ -110,6 +110,7 @@ make stop
 This terminates the PostgreSQL container and kills any related tmux sessions.
 
 Inspired By
+
 	•	https://codingchallenges.fyi/challenges/challenge-realtime-chat
 
 Enjoy real-time publishing and subscribing with Go TCP Feed!
