@@ -54,15 +54,15 @@ db: check-os check-docker
 # Open a psql session in a new tmux session
 open-db:
 	@tmux kill-session -t open-db 2>/dev/null || true
-	tmux new-session -d -s open_db "\
+	@tmux new-session -d -s open_db "\
 		docker exec -it go_chat_db \
 		psql -U ${DB_USER} -d ${DB_NAME} \
 	"
 
 # Serve command in its own tmux session
 server:
-	@tmux kill-session -t serve 2>/dev/null || true
-	tmux new-session -d -s serve "\
+	@tmux kill-session -t server 2>/dev/null || true
+	@tmux new-session -d -s server "\
 		go run main.go --server \
 	"
 
@@ -70,21 +70,22 @@ server:
 # Run client stream in separate tmux session
 feed:
 	@tmux kill-session -t publisher 2>/dev/null || true
-	tmux new-session -d -s feed "\
+	@tmux new-session -d -s feed "\
 		go run main.go --client-stream \
 	"
 
 # Run publisher in a separate tmux session
 publisher:
 	@tmux kill-session -t publisher 2>/dev/null || true
-	tmux new-session -d -s publisher "\
+	@tmux new-session -d -s publisher "\
         go run main.go --publisher; \
     "
 
 # client - starts both publisher and client stream in separate tmux sessions
 client:
-	@make publisher
+	@$(call check-tmux-session,server) 
 	@make feed
+	@make publisher
 
 # Combined 'status' to list tmux sessions
 status:
@@ -94,12 +95,23 @@ status:
 attach-%:
 	tmux attach-session -t $*
 
-# Start everything
+# Function to check if a tmux session exists
+check-tmux-session = \
+	sleep 1;\
+	if ! tmux has-session -t $1 2>/dev/null; then \
+		echo "ERROR: Tmux session '$1' was not created."; \
+		exit 1; \
+	fi
+
 app:
-	@make setup || { echo "Setup failed."; exit 1;}
+	@make setup || { echo "Setup failed."; exit 1; }
 	@make db || { echo "Failed to set up the database."; exit 1; }
 	@make server || { echo "Failed to start the server."; exit 1; }
+	@$(call check-tmux-session,serve) # Ensure the server session exists
 	@make client || { echo "Failed to start the client."; exit 1; }
+	@$(call check-tmux-session,feed) # Ensure the client session exists
+	@$(call check-tmux-session,publisher) # Ensure the publisher session exists
+	@echo "App successfully started with all components running."
 
 # Stop everything: db container + all tmux sessions
 stop:
