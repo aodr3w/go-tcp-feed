@@ -78,7 +78,7 @@ name (atleast 4 characters): << john
 
 **Feed Session**
 
-	•	Feed session displays all messages as they arrive:
+Feed session displays all messages as they arrive:
 
 ```
 2025/01/10 21:43:11 PostgreSQL connected , tables created
@@ -89,7 +89,8 @@ john >> happy to be here 💯🔥😎 [1/10/2025 18:45:26]
 
 
 **Server Session**
-- Server accepts connections on two ports (3000 for read, 2000 for write):
+
+Server accepts connections on two ports (3000 for read, 2000 for write):
 
 ```
 2025/01/10 21:43:09 PostgreSQL connected , tables created
