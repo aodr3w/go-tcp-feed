@@ -13,20 +13,27 @@ Go TCP Feed is a command-line application that uses two TCP ports:
 Multiple clients can connect to these ports to send and receive messages in real time. The PostgreSQL database ensures persistence and maintains message history.
 
 Features
-	1.	Publish Messages: Any user can send a message by entering a name (minimum 4 characters) and typing out their message.
-	2.	Subscribe to Feed: A “feed” client displays all new messages in near real time.
-	3.	Server Logging: Logs both read and write connections, as well as successful user creations.
+	- Publish Messages: Any user can send a message by entering a name (minimum 4 characters) and typing out their message.
+
+    - Subscribe to Feed: A “feed” client displays all new messages in near real time.
+    
+    - Server Logging: Logs both read and write connections, as well as successful user creations.
 
 Requirements
-	•	Go 1.18+
-	•	Docker and Docker daemon running (for the PostgreSQL container)
-	•	tmux installed (on macOS you can install via brew install tmux)
+	-	Go 1.18+.
+
+	-	Docker and Docker daemon running (for the PostgreSQL container) .
+
+	-	tmux installed (on macOS you can install via brew install tmux).
+
 
 Quick Start
 	1.	Clone the Repository
 
-git clone https://github.com/aodr3w/go-tcp-feed.git
-cd go-tcp-feed
+    ```
+    git clone https://github.com/aodr3w/go-tcp-feed.git
+    cd go-tcp-feed
+    ```
 
 
 	2.	Set Up Environment Variables (Optional)
@@ -95,7 +102,7 @@ make stop
 This terminates the PostgreSQL container and kills any related tmux sessions.
 
 Inspired By
-	•	Realtime Chat Challenge
+	•	https://codingchallenges.fyi/challenges/challenge-realtime-chat
 
 Enjoy real-time publishing and subscribing with Go TCP Feed!
 Feel free to open an issue or submit a PR if you have any questions or improvements.
