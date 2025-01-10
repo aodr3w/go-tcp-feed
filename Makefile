@@ -59,7 +59,7 @@ open-db:
 	"
 
 # Serve command in its own tmux session
-serve:
+server:
 	tmux new-session -d -s serve "\
 		make db && \
 		go run main.go --server \
@@ -68,7 +68,7 @@ serve:
 
 # Run client stream in separate tmux session
 feed:
-	tmux new-session -d -s  "\
+	tmux new-session -d -s feed "\
 		go run main.go --client-stream \
 	"
 
@@ -78,8 +78,8 @@ publisher:
 		go run main.go --publisher \
 	"
 
-# Frontend - starts both publisher and client stream in separate tmux sessions
-frontend:
+# client - starts both publisher and client stream in separate tmux sessions
+client:
 	@make publisher
 	@make feed
 
@@ -95,18 +95,18 @@ attach-%:
 app:
 	@make setup || { echo "Setup failed."; exit 1;}
 	@make db || { echo "Failed to set up the database."; exit 1; }
-	@make serve || { echo "Failed to start the server."; exit 1; }
-	@make frontend || { echo "Failed to start the frontend."; exit 1; }
+	@make server || { echo "Failed to start the server."; exit 1; }
+	@make client || { echo "Failed to start the client."; exit 1; }
 
 # Stop everything: db container + all tmux sessions
 stop:
 	@echo "Stopping Docker container..."
 	@make stop-db
-	@echo "Stopping tmux sessions (if running): serve, backend, publisher, feed, frontend, open_db..."
-	@tmux kill-session -t serve 2>/dev/null || true
-	@tmux kill-session -t backend 2>/dev/null || true
+	@echo "Stopping tmux sessions (if running): server, publisher, feed, open_db..."
+	@tmux kill-session -t server 2>/dev/null || true
 	@tmux kill-session -t publisher 2>/dev/null || true
 	@tmux kill-session -t feed 2>/dev/null || true
-	@tmux kill-session -t frontend 2>/dev/null || true
 	@tmux kill-session -t open_db 2>/dev/null || true
 	@echo "All stopped."
+
+.PHONY: server client
