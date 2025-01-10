@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -154,7 +153,6 @@ func (dao Dao) GetReceivedMessages(userID int, size int, offset int, minTime tim
 }
 
 func (dao Dao) InsertUserMessage(userID int, message string, createdAt time.Time) error {
-	log.Println("inserting with time: ", createdAt)
 	query := `
 	INSERT INTO messages (user_id, text, created_at)
 	VALUES ($1, $2, $3)

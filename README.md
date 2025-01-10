@@ -66,7 +66,6 @@ Publisher Session
 	•	Publisher allows you to publish messages under a chosen username:
 
 ```
-2025/01/10 21:43:11 PostgreSQL connected , tables created
 name (atleast 4 characters): << john
 2025/01/10 21:44:37 userID-john
 << hello world my name is john  😄
@@ -81,7 +80,6 @@ name (atleast 4 characters): << john
 Feed session displays all messages as they arrive:
 
 ```
-2025/01/10 21:43:11 PostgreSQL connected , tables created
 john >> hello world my name is jon 😄 [1/10/2025 18:45:01]
 john >> happy to be here 💯🔥😎 [1/10/2025 18:45:26]
 ```
@@ -93,7 +91,6 @@ john >> happy to be here 💯🔥😎 [1/10/2025 18:45:26]
 Server accepts connections on two ports (3000 for read, 2000 for write):
 
 ```
-2025/01/10 21:43:09 PostgreSQL connected , tables created
 [readMessages] 2025/01/10 21:43:09 server is accepting connections on 3000
 [writeMessages]  2025/01/10 21:43:09 server is accepting connections on 2000
 [readMessages] 2025/01/10 21:43:11 new connection received
