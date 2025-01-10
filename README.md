@@ -26,6 +26,8 @@ Multiple clients can connect to these ports to send and receive messages in real
 
 -	Docker and Docker daemon running (for the PostgreSQL container) .
 
+-   Postgres15 image
+
 -	tmux installed (on macOS you can install via brew install tmux).
 
 
