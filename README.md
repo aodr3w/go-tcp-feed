@@ -43,7 +43,11 @@ Quick Start
 
 3.	Build and Start the Application
 
-make app
+```
+% make app
+
+```
+
 •	Installs missing dependencies on macOS (like tmux).
 •	Checks/starts Docker.
 •	Launches a PostgreSQL container for storing messages.
