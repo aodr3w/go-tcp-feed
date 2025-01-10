@@ -92,7 +92,7 @@ status:
 	@tmux ls || echo "No tmux sessions running."
 
 # Attach to a named tmux session
-attach-%:
+a-%:
 	tmux attach-session -t $*
 
 # Function to check if a tmux session exists
