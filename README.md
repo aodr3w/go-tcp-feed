@@ -1,5 +1,3 @@
-Below is a concise, finalized README that you can include in your repository. Feel free to tweak any headings or formatting to match your style.
-
 **Go TCP Feed**
 
 A simple TCP-based message feed written in Go. This application allows clients to publish messages to a shared feed in near-real-time, with all messages stored in a PostgreSQL database.
