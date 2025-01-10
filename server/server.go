@@ -9,7 +9,7 @@ import (
 func NewLogger(prefix string) *log.Logger {
 	return log.New(
 		log.Writer(),
-		fmt.Sprintf("[%s] ", prefix),
+		fmt.Sprintf("%s ", prefix),
 		log.LstdFlags,
 	)
 }
