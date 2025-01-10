@@ -64,8 +64,6 @@ func InitDB() error {
 	if err != nil {
 		return err
 	}
-
-	log.Println("PostgreSQL connected , tables created")
 	return nil
 }
 
