@@ -44,10 +44,9 @@ Multiple clients can connect to these ports to send and receive messages in real
     If you have a .env file, environment variables (e.g., PG_PASS, DB_USER, DB_NAME) will be automatically loaded by the Makefile.
 
 3.	Build and Start the Application
-
-```
-% make app
-```
+    ```
+    % make app
+    ```
 
 - Installs missing dependencies on macOS (like tmux).
 - Checks/starts Docker.
@@ -55,10 +54,9 @@ Multiple clients can connect to these ports to send and receive messages in real
 - Spins up server, feed, and publisher in separate tmux sessions.
 
 4.	View Running Sessions
-
-```
-tmux ls
-```
+    ```
+    tmux ls
+    ```
 
 You should see sessions named server, feed, and publisher.
 
@@ -91,8 +89,7 @@ john >> happy to be here 💯🔥😎 [1/10/2025 18:45:26]
 
 
 **Server Session**
-
-	•	Server accepts connections on two ports (3000 for read, 2000 for write):
+- Server accepts connections on two ports (3000 for read, 2000 for write):
 
 ```
 2025/01/10 21:43:09 PostgreSQL connected , tables created
