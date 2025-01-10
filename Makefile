@@ -53,6 +53,7 @@ db: check-os check-docker
 
 # Open a psql session in a new tmux session
 open-db:
+	@tmux kill-session -t open-db 2>/dev/null || true
 	tmux new-session -d -s open_db "\
 		docker exec -it go_chat_db \
 		psql -U ${DB_USER} -d ${DB_NAME} \
@@ -60,23 +61,25 @@ open-db:
 
 # Serve command in its own tmux session
 server:
+	@tmux kill-session -t serve 2>/dev/null || true
 	tmux new-session -d -s serve "\
-		make db && \
 		go run main.go --server \
 	"
 
 
 # Run client stream in separate tmux session
 feed:
+	@tmux kill-session -t publisher 2>/dev/null || true
 	tmux new-session -d -s feed "\
 		go run main.go --client-stream \
 	"
 
 # Run publisher in a separate tmux session
 publisher:
+	@tmux kill-session -t publisher 2>/dev/null || true
 	tmux new-session -d -s publisher "\
-		go run main.go --publisher \
-	"
+        go run main.go --publisher; \
+    "
 
 # client - starts both publisher and client stream in separate tmux sessions
 client:
