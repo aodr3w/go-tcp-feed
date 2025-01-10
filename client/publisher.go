@@ -67,6 +67,9 @@ func Publisher(serverPort int) {
 		if len(msg) == 0 {
 			continue
 		}
+		if strings.EqualFold(msg, "q") {
+			return
+		}
 		mp := data.NewMessagePayload(data.NewMessage(msg, userName), 0)
 		mpb, err := mp.ToBytes()
 		handleError(err)
