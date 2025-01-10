@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aodr3w/go-chat/data"
+	"github.com/aodr3w/go-tcp-feed/data"
 )
 
 var (

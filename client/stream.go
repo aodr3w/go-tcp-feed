@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/aodr3w/go-chat/data"
+	"github.com/aodr3w/go-tcp-feed/data"
 )
 
 // connects to the server and writes all messages from earlies to latest in near real time

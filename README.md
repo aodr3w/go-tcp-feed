@@ -1,11 +1,15 @@
-near real time chat with  persistence written in go.
+DESCRIPTION:
+A simple tcp based message feed written in go , that allows clients to publish messages to a message feed in near real time.
 
-REQUIREMENTS:
+HOW TO RUN
+- make app
 
-* The server will be able to support multiple client connections. 
-* Every time a client sends a message to the server, the server will distribute the message to all the connected clients except the sender.
+HOW TO STOP
+- make stop
 
+SCREENSHOTS
+<-- insert screen shots of  systems>
 
-SOURCE:
+INSPIRED BY:
 
 https://codingchallenges.fyi/challenges/challenge-realtime-chat

@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/aodr3w/go-chat/client"
-	"github.com/aodr3w/go-chat/data"
-	"github.com/aodr3w/go-chat/server"
+	"github.com/aodr3w/go-tcp-feed/client"
+	"github.com/aodr3w/go-tcp-feed/data"
+	"github.com/aodr3w/go-tcp-feed/server"
 )
 
 const writePort = 2000

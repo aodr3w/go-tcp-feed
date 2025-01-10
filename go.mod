@@ -1,4 +1,4 @@
-module github.com/aodr3w/go-chat
+module github.com/aodr3w/go-tcp-feed
 
 go 1.23.4
 
