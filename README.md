@@ -13,32 +13,33 @@ Go TCP Feed is a command-line application that uses two TCP ports:
 Multiple clients can connect to these ports to send and receive messages in real time. The PostgreSQL database ensures persistence and maintains message history.
 
 Features
-	- Publish Messages: Any user can send a message by entering a name (minimum 4 characters) and typing out their message.
+- Publish Messages: Any user can send a message by entering a name (minimum 4 characters) and typing out their message.
 
-    - Subscribe to Feed: A “feed” client displays all new messages in near real time.
+- Subscribe to Feed: A “feed” client displays all new messages in near real time.
     
-    - Server Logging: Logs both read and write connections, as well as successful user creations.
+- Server Logging: Logs both read and write connections, as well as successful user creations.
 
 Requirements
-	-	Go 1.18+.
+-	Go 1.18+.
 
-	-	Docker and Docker daemon running (for the PostgreSQL container) .
+-	Docker and Docker daemon running (for the PostgreSQL container) .
 
-	-	tmux installed (on macOS you can install via brew install tmux).
+-	tmux installed (on macOS you can install via brew install tmux).
 
 
 Quick Start
 
 1.	Clone the Repository
 
+    git clone https://github.com/aodr3w/go-tcp-feed.git
+    cd go-tcp-feed
 
-git clone https://github.com/aodr3w/go-tcp-feed.git
-cd go-tcp-feed
+
 
 
 2.	Set Up Environment Variables (Optional)
 
-If you have a .env file, environment variables (e.g., PG_PASS, DB_USER, DB_NAME) will be automatically loaded by the Makefile.
+    If you have a .env file, environment variables (e.g., PG_PASS, DB_USER, DB_NAME) will be automatically loaded by the Makefile.
 
 3.	Build and Start the Application
 
@@ -49,6 +50,7 @@ make app
 •	Spins up server, feed, and publisher in separate tmux sessions.
 
 4.	View Running Sessions
+
 ```
 tmux ls
 ```
