@@ -45,7 +45,7 @@ Multiple clients can connect to these ports to send and receive messages in real
 
 3.	Build and Start the Application
     ```
-    % make app
+    make app
     ```
 
 - Installs missing dependencies on macOS (like tmux).
@@ -104,7 +104,7 @@ john >> happy to be here 💯🔥😎 [1/10/2025 18:45:26]
 When you’re done, stop the Docker container and tmux sessions with:
 
 ```
-% make stop
+make stop
 ```
 
 This terminates the PostgreSQL container and kills any related tmux sessions.
