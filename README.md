@@ -20,7 +20,7 @@ Multiple clients can connect to these ports to send and receive messages in real
 
 **Requirements**
 
--   OSX (You can change this by updating the MAKEFILE)
+-   OSX or UBUNTU LINUX
 
 -	Go 1.18+.
 
