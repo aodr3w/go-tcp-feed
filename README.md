@@ -76,9 +76,9 @@ make app
 - Spins up server, feed, and publisher in separate tmux sessions.
 
 ### 4. View Running Sessions
-    ```
-    tmux ls
-    ```
+```
+tmux ls
+```
 
 You should see sessions named server, feed, and publisher.
 
